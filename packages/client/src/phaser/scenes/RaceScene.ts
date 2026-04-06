@@ -72,6 +72,8 @@ export class RaceScene extends Phaser.Scene {
   private isPlaying: boolean = false;
   private frameAccum: number = 0;
   private raceFinished: boolean = false;
+  private raceStartWallTime: number = 0; // Date.now() when race started
+  private pausedTimeAccum: number = 0;   // total ms spent paused
   private crowdState: 'idle' | 'countdown' | 'raceStart' | 'racing' | 'homeStretch' | 'finished' = 'idle';
   private raceStartFrame: number = 0;
   private finishedCount: number = 0;
@@ -331,7 +333,12 @@ export class RaceScene extends Phaser.Scene {
         backgroundColor: '#22222288', padding: { x: 10, y: 5 },
       }).setOrigin(0.5, 1).setDepth(10).setInteractive({ useHandCursor: true });
       btn.on('pointerdown', () => {
-        this.playbackSpeed = [1, 2, 4][i];
+        // Recalculate wall time reference so current frame position is preserved at new speed
+        const msPerTick = 1000 / 60;
+        const currentTimeMs = this.currentFrame * msPerTick;
+        const newSpeed = [1, 2, 4][i];
+        this.raceStartWallTime = Date.now() - this.pausedTimeAccum - (currentTimeMs / newSpeed);
+        this.playbackSpeed = newSpeed;
         this.speedBtns.forEach((b, j) => b.setColor(j === i ? '#FFD700' : '#aaa'));
       });
       this.speedBtns.push(btn);
@@ -503,6 +510,8 @@ export class RaceScene extends Phaser.Scene {
       this.raceStartFrame = 0;
       this.finishedCount = 0;
       this.isPlaying = true;
+      this.raceStartWallTime = Date.now();
+      this.pausedTimeAccum = 0;
       startMusic();
     });
 
@@ -514,17 +523,33 @@ export class RaceScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, delta: number) {
+  update(_time: number, _delta: number) {
     if (!this.isPlaying || this.raceFinished || this.isPaused) return;
-    // Cap delta at 100ms to prevent huge catch-up jumps after tab switch
-    const cappedDelta = Math.min(delta, 100);
-    this.frameAccum += cappedDelta * this.playbackSpeed;
+
+    // Use wall clock time to determine which frame we should be on.
+    // This way, even if the browser throttles our updates while backgrounded,
+    // we catch up instantly when the tab regains focus.
     const msPerTick = 1000 / 60;
-    while (this.frameAccum >= msPerTick && this.currentFrame < this.frames.length) {
-      this.frameAccum -= msPerTick;
-      this.applyFrame(this.frames[this.currentFrame]);
+    const elapsedMs = (Date.now() - this.raceStartWallTime - this.pausedTimeAccum) * this.playbackSpeed;
+    const targetFrame = Math.floor(elapsedMs / msPerTick);
+
+    // Advance frames, but cap at 10 per update call for rendering performance
+    const maxPerUpdate = 10;
+    let processed = 0;
+    while (this.currentFrame < targetFrame && this.currentFrame < this.frames.length && processed < maxPerUpdate) {
       this.currentFrame++;
+      processed++;
     }
+    // Always render the current frame
+    if (this.currentFrame > 0 && this.currentFrame <= this.frames.length) {
+      this.applyFrame(this.frames[Math.min(this.currentFrame - 1, this.frames.length - 1)]);
+    }
+    // If we're behind, skip ahead (don't render intermediate frames)
+    if (this.currentFrame < targetFrame && this.currentFrame < this.frames.length) {
+      this.currentFrame = Math.min(targetFrame, this.frames.length);
+      this.applyFrame(this.frames[Math.min(this.currentFrame - 1, this.frames.length - 1)]);
+    }
+
     if (this.currentFrame >= this.frames.length && !this.raceFinished) {
       this.raceFinished = true;
       this.isPlaying = false;
@@ -1087,14 +1112,14 @@ export class RaceScene extends Phaser.Scene {
     }
   }
 
+  private pauseStartTime: number = 0;
+
   private showPauseMenu() {
     this.isPaused = true;
-    // Pause scene timers (stops countdown, delayed calls, etc.)
+    this.pauseStartTime = Date.now();
     this.time.paused = true;
-    // Pause all audio
     setCrowdVolume(0, 0.1);
     setMusicVolume(0);
-    // Stop any speech synthesis (announcer)
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     const { W, H } = this;
 
@@ -1146,9 +1171,8 @@ export class RaceScene extends Phaser.Scene {
 
   private hidePauseMenu() {
     this.isPaused = false;
-    // Resume scene timers
+    this.pausedTimeAccum += Date.now() - this.pauseStartTime;
     this.time.paused = false;
-    // Resume audio
     setCrowdVolume(0.1, 0.3);
     setMusicVolume(0.3);
     if (this.pauseMenu) {
