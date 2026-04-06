@@ -7,6 +7,21 @@ interface Props {
 }
 
 export function MainMenu({ user, onNavigate, onLogout }: Props) {
+  // Inject shimmer animation
+  React.useEffect(() => {
+    if (document.getElementById('shimmer-style')) return;
+    const style = document.createElement('style');
+    style.id = 'shimmer-style';
+    style.textContent = `
+      @keyframes shimmer {
+        0% { background-position: 100% 50%; }
+        50% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -141,15 +156,31 @@ function MenuRow({ title, subtitle, bg, borderColor, accentColor, glow, flex, on
       el.style.boxShadow = glow || 'none';
     }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{
-          fontSize: isPrimary ? 38 : 28,
-          fontWeight: 900,
-          color: '#fff',
-          letterSpacing: isPrimary ? 4 : 2,
-          textTransform: 'uppercase',
-          fontFamily: '"Trebuchet MS", "Lucida Grande", sans-serif',
-          textShadow: isPrimary ? '0 2px 8px rgba(0,0,0,0.5)' : 'none',
-        }}>{title}</div>
+        {isPrimary ? (
+          <div style={{
+            fontSize: 56,
+            fontWeight: 900,
+            letterSpacing: 10,
+            textTransform: 'uppercase',
+            fontFamily: '"Trebuchet MS", "Lucida Grande", sans-serif',
+            background: 'linear-gradient(90deg, #fff, #ffd700, #fff, #ff8800, #fff)',
+            backgroundSize: '300% 100%',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            animation: 'shimmer 3s ease-in-out infinite',
+            textShadow: 'none',
+            filter: 'drop-shadow(0 2px 6px rgba(255,215,0,0.4))',
+          }}>{title}</div>
+        ) : (
+          <div style={{
+            fontSize: 28,
+            fontWeight: 900,
+            color: '#fff',
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            fontFamily: '"Trebuchet MS", "Lucida Grande", sans-serif',
+          }}>{title}</div>
+        )}
         <div style={{
           fontSize: isPrimary ? 16 : 14,
           color: accentColor || '#bbb',
