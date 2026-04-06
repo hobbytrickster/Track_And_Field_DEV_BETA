@@ -14,12 +14,18 @@ function checkExpiredChallenges() {
   for (const ch of db.challenges) {
     if (ch.status === 'pending' && new Date(ch.expiresAt) < now) {
       ch.status = 'expired';
-      // Mark all invited entries as declined
       const entries = (db.challengeEntries || []).filter(e => e.challengeId === ch.id);
       for (const e of entries) {
         if (e.status === 'invited') e.status = 'declined';
       }
     }
+  }
+  // Purge expired challenges older than 1 hour (no need to keep them)
+  const cutoff = new Date(Date.now() - 3600000);
+  const toRemove = db.challenges.filter(c => c.status === 'expired' && new Date(c.createdAt) < cutoff).map(c => c.id);
+  if (toRemove.length > 0) {
+    db.challenges = db.challenges.filter(c => !toRemove.includes(c.id));
+    db.challengeEntries = (db.challengeEntries || []).filter(e => !toRemove.includes(e.challengeId));
   }
   saveDb();
 }

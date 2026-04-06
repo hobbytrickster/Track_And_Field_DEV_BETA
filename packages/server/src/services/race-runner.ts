@@ -303,6 +303,21 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
   // Store result with lane metadata for consistent display
   challenge.simulationResult = JSON.stringify({ ...simulation, laneMetadata });
   challenge.status = 'simulated';
+
+  // Cleanup: remove old simulated challenges between these players, keep only this one
+  const playerIds = entries.map(e => e.userId).sort();
+  const oldChallenges = db.challenges.filter(c =>
+    c.id !== challengeId && c.status === 'simulated' &&
+    (() => {
+      const cEntries = (db.challengeEntries || []).filter(e => e.challengeId === c.id && e.status === 'submitted');
+      const cPlayerIds = cEntries.map(e => e.userId).sort();
+      return cPlayerIds.length === playerIds.length && cPlayerIds.every((id, i) => id === playerIds[i]);
+    })()
+  );
+  for (const old of oldChallenges) {
+    db.challengeEntries = db.challengeEntries.filter(e => e.challengeId !== old.id);
+    db.challenges = db.challenges.filter(c => c.id !== old.id);
+  }
   challenge.completedAt = new Date().toISOString();
 
   // Award rewards to human players
