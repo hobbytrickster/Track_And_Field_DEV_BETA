@@ -54,6 +54,38 @@ export function registerRaceRoutes(app: FastifyInstance) {
     };
   });
 
+  // Best times for an event — your top 10 + friends' top 10
+  app.get('/api/race/best-times/:eventType', async (request, reply) => {
+    const userId = authenticate(request, reply);
+    if (!userId) return;
+    const { eventType } = request.params as { eventType: string };
+
+    const db = getDb();
+    const records = db.records || [];
+
+    // Your best 10 times in this event
+    const myBest = records
+      .filter(r => r.eventType === eventType && r.userId === userId)
+      .sort((a, b) => a.finishTimeMs - b.finishTimeMs)
+      .slice(0, 10)
+      .map(r => ({ time: r.finishTimeMs, name: r.displayName, date: r.setAt }));
+
+    // Friends' + your best 10 times combined
+    const friendships = db.friendships || [];
+    const friendIds = friendships
+      .filter(f => f.userA === userId || f.userB === userId)
+      .map(f => f.userA === userId ? f.userB : f.userA);
+    const allIds = [userId, ...friendIds];
+
+    const friendsBest = records
+      .filter(r => r.eventType === eventType && allIds.includes(r.userId))
+      .sort((a, b) => a.finishTimeMs - b.finishTimeMs)
+      .slice(0, 10)
+      .map(r => ({ time: r.finishTimeMs, name: r.displayName, isYou: r.userId === userId, date: r.setAt }));
+
+    return { myBest, friendsBest };
+  });
+
   app.get('/api/race/history', async (request, reply) => {
     const userId = authenticate(request, reply);
     if (!userId) return;

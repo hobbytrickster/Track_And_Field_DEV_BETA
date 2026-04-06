@@ -49,6 +49,8 @@ export class RaceScene extends Phaser.Scene {
   private playerLane: number = 4;
   private raceDistance: number = 200;
   private records: { finishTimeMs: number; displayName: string }[] = [];
+  private myBestTimes: { time: number; name: string }[] = [];
+  private friendsBestTimes: { time: number; name: string; isYou?: boolean }[] = [];
   private playerAppearance: any = null;
   private stadiumConfig: any = null;
   private laneLabels: Record<number, string> = {};
@@ -101,6 +103,8 @@ export class RaceScene extends Phaser.Scene {
     eventType: EventType;
     playerLane: number;
     records?: { finishTimeMs: number; displayName: string }[];
+    myBestTimes?: { time: number; name: string }[];
+    friendsBestTimes?: { time: number; name: string; isYou?: boolean }[];
     playerAppearance?: any;
     stadiumConfig?: any;
     laneLabels?: Record<number, string>;
@@ -114,6 +118,8 @@ export class RaceScene extends Phaser.Scene {
     this.playerLane = data.playerLane;
     this.raceDistance = data.eventType === '200m' ? 200 : data.eventType === '400m' ? 400 : 800;
     this.records = data.records || [];
+    this.myBestTimes = data.myBestTimes || [];
+    this.friendsBestTimes = data.friendsBestTimes || [];
     this.playerAppearance = data.playerAppearance || null;
     this.stadiumConfig = data.stadiumConfig || null;
     this.laneLabels = data.laneLabels || {};
@@ -1188,11 +1194,47 @@ export class RaceScene extends Phaser.Scene {
 
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.65).setDepth(9000);
 
-    const pw = 540, ph = 440;
-    this.add.rectangle(W / 2, H / 2, pw, ph, 0x12122a, 0.95)
+    // Three panels: Friends Best (left), Race Results (center), Your Best (right)
+    const pw = 440, ph = 440;
+    const spw = 220, sph = 380; // side panel dimensions
+    const gap = 12;
+    const centerX = W / 2;
+    const centerY = H / 2;
+
+    // ── LEFT PANEL: Friends Best Times ──
+    const leftX = centerX - pw / 2 - gap - spw / 2;
+    this.add.rectangle(leftX, centerY, spw, sph, 0x0a1a2a, 0.95)
+      .setStrokeStyle(2, 0x4488cc).setDepth(9001);
+    this.add.text(leftX, centerY - sph / 2 + 14, `FRIENDS BEST\n${this.eventType}`, {
+      fontSize: '14px', fontFamily: 'Arial Black', color: '#4488cc',
+      stroke: '#000', strokeThickness: 2, align: 'center',
+    }).setOrigin(0.5, 0).setDepth(9002);
+
+    if (this.friendsBestTimes.length === 0) {
+      this.add.text(leftX, centerY, 'No times yet', {
+        fontSize: '12px', fontFamily: 'Arial', color: '#666',
+      }).setOrigin(0.5).setDepth(9002);
+    } else {
+      this.friendsBestTimes.slice(0, 10).forEach((r, i) => {
+        const y = centerY - sph / 2 + 55 + i * 28;
+        const col = r.isYou ? '#FFD700' : '#ccc';
+        this.add.text(leftX - spw / 2 + 12, y, `${i + 1}.`, {
+          fontSize: '12px', fontFamily: 'Arial Black', color: '#666',
+        }).setDepth(9002);
+        this.add.text(leftX - spw / 2 + 30, y, `${r.name}${r.isYou ? ' (YOU)' : ''}`, {
+          fontSize: '12px', fontFamily: 'Arial', color: col, stroke: '#000', strokeThickness: 1,
+        }).setDepth(9002);
+        this.add.text(leftX + spw / 2 - 12, y, formatRaceTime(r.time), {
+          fontSize: '12px', fontFamily: 'Arial Black', color: col, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(1, 0).setDepth(9002);
+      });
+    }
+
+    // ── CENTER PANEL: Race Results ──
+    this.add.rectangle(centerX, centerY, pw, ph, 0x12122a, 0.95)
       .setStrokeStyle(3, 0xffd700).setDepth(9001);
 
-    this.add.text(W / 2, H / 2 - ph / 2 + 22, 'RACE RESULTS', {
+    this.add.text(centerX, centerY - ph / 2 + 22, 'RACE RESULTS', {
       fontSize: '28px', fontFamily: 'Arial Black', color: '#FFD700',
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(9002);
@@ -1202,23 +1244,23 @@ export class RaceScene extends Phaser.Scene {
 
     this.results.slice(0, 8).forEach((res, i) => {
       const isP = res.lane === this.playerLane;
-      const y = H / 2 - ph / 2 + 65 + i * 36;
+      const y = centerY - ph / 2 + 65 + i * 36;
       const col = isP ? '#FFD700' : i < 3 ? '#fff' : '#999';
 
-      this.add.text(W / 2 - 230, y, i < 3 ? medals[i] : `${i + 1}th`, {
+      this.add.text(centerX - 190, y, i < 3 ? medals[i] : `${i + 1}th`, {
         fontSize: '16px', fontFamily: 'Arial Black',
         color: i < 3 ? medalColors[i] : '#555',
         stroke: '#000', strokeThickness: 2,
       }).setDepth(9002);
 
-      this.add.arc(W / 2 - 170, y + 9, 7, 0, 360, false, LANE_COLORS[res.lane - 1]).setDepth(9002);
+      this.add.arc(centerX - 130, y + 9, 7, 0, 360, false, LANE_COLORS[res.lane - 1]).setDepth(9002);
 
-      this.add.text(W / 2 - 150, y, `${res.displayName}${isP ? ' (YOU)' : ''}`, {
+      this.add.text(centerX - 110, y, `${res.displayName}${isP ? ' (YOU)' : ''}`, {
         fontSize: '14px', fontFamily: 'Arial',
         color: col, stroke: '#000', strokeThickness: 2,
       }).setDepth(9002);
 
-      this.add.text(W / 2 + 190, y, formatRaceTime(res.finishTimeMs), {
+      this.add.text(centerX + 150, y, formatRaceTime(res.finishTimeMs), {
         fontSize: '14px', fontFamily: 'Arial Black',
         color: col, stroke: '#000', strokeThickness: 2,
       }).setOrigin(1, 0).setDepth(9002);
@@ -1231,39 +1273,50 @@ export class RaceScene extends Phaser.Scene {
         : `${pr.finishPosition}th Place`;
       const tc = pr.finishPosition === 1 ? '#FFD700'
         : pr.finishPosition <= 3 ? '#44ff44' : '#ff8888';
-      this.add.text(W / 2, H / 2 + ph / 2 - 75, txt, {
+      this.add.text(centerX, centerY + ph / 2 - 75, txt, {
         fontSize: '26px', fontFamily: 'Arial Black',
         color: tc, stroke: '#000', strokeThickness: 4,
       }).setOrigin(0.5).setDepth(9002);
     }
 
-    // Personal Records
-    if (this.records.length > 0) {
-      let recStr = `PERSONAL RECORDS - ${this.eventType}\n`;
-      this.records.forEach((r, i) => {
-        const medal = i === 0 ? '1st' : i === 1 ? '2nd' : '3rd';
-        recStr += `${medal}  ${formatRaceTime(r.finishTimeMs)}  ${r.displayName}\n`;
+    // ── RIGHT PANEL: Your Best Times ──
+    const rightX = centerX + pw / 2 + gap + spw / 2;
+    this.add.rectangle(rightX, centerY, spw, sph, 0x1a0a1a, 0.95)
+      .setStrokeStyle(2, 0xcc2244).setDepth(9001);
+    this.add.text(rightX, centerY - sph / 2 + 14, `YOUR BEST\n${this.eventType}`, {
+      fontSize: '14px', fontFamily: 'Arial Black', color: '#cc2244',
+      stroke: '#000', strokeThickness: 2, align: 'center',
+    }).setOrigin(0.5, 0).setDepth(9002);
+
+    if (this.myBestTimes.length === 0) {
+      this.add.text(rightX, centerY, 'No times yet', {
+        fontSize: '12px', fontFamily: 'Arial', color: '#666',
+      }).setOrigin(0.5).setDepth(9002);
+    } else {
+      this.myBestTimes.slice(0, 10).forEach((r, i) => {
+        const y = centerY - sph / 2 + 55 + i * 28;
+        this.add.text(rightX - spw / 2 + 12, y, `${i + 1}.`, {
+          fontSize: '12px', fontFamily: 'Arial Black', color: '#666',
+        }).setDepth(9002);
+        this.add.text(rightX + spw / 2 - 12, y, formatRaceTime(r.time), {
+          fontSize: '13px', fontFamily: 'Arial Black', color: '#FFD700', stroke: '#000', strokeThickness: 1,
+        }).setOrigin(1, 0).setDepth(9002);
       });
-      this.add.text(W / 2 - pw / 2 + 20, H / 2 + ph / 2 - 105, recStr, {
-        fontSize: '11px', fontFamily: 'Arial', color: '#aaa',
-        stroke: '#000', strokeThickness: 2, lineSpacing: 2,
-      }).setDepth(9002);
     }
 
-    // Replay button
-    const replayBg = this.add.rectangle(W / 2 - 110, H / 2 + ph / 2 - 30, 180, 40, 0x4488cc)
+    // ── Buttons (below center panel) ──
+    const replayBg = this.add.rectangle(centerX - 110, centerY + ph / 2 - 30, 180, 40, 0x4488cc)
       .setStrokeStyle(2, 0x66aaee).setInteractive({ useHandCursor: true }).setDepth(9002);
-    this.add.text(W / 2 - 110, H / 2 + ph / 2 - 30, 'REPLAY', {
+    this.add.text(centerX - 110, centerY + ph / 2 - 30, 'REPLAY', {
       fontSize: '16px', fontFamily: 'Arial Black', color: '#fff',
     }).setOrigin(0.5).setDepth(9003);
     replayBg.on('pointerover', () => replayBg.setFillStyle(0x5599dd));
     replayBg.on('pointerout', () => replayBg.setFillStyle(0x4488cc));
     replayBg.on('pointerdown', () => this.restartRace());
 
-    // Continue button
-    const btnBg = this.add.rectangle(W / 2 + 110, H / 2 + ph / 2 - 30, 180, 40, 0x4444aa)
+    const btnBg = this.add.rectangle(centerX + 110, centerY + ph / 2 - 30, 180, 40, 0x4444aa)
       .setStrokeStyle(2, 0xffd700).setInteractive({ useHandCursor: true }).setDepth(9002);
-    this.add.text(W / 2 + 110, H / 2 + ph / 2 - 30, 'CONTINUE', {
+    this.add.text(centerX + 110, centerY + ph / 2 - 30, 'CONTINUE', {
       fontSize: '16px', fontFamily: 'Arial Black', color: '#fff',
     }).setOrigin(0.5).setDepth(9003);
 

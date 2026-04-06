@@ -57,7 +57,9 @@ export function RaceView({ simulation, playerLane, rewards, playerAppearance, st
     gameRef.current = game;
 
     game.events.on('ready', async () => {
-      let records: { finishTimeMs: number; displayName: string }[] = [];
+      let records: any[] = [];
+      let myBestTimes: any[] = [];
+      let friendsBestTimes: any[] = [];
       try {
         const allRecords = await api.getRecords();
         const eventKey = simulation.eventType as keyof typeof allRecords;
@@ -65,6 +67,9 @@ export function RaceView({ simulation, playerLane, rewards, playerAppearance, st
           finishTimeMs: r.finishTimeMs,
           displayName: r.displayName,
         }));
+        const bestData = await api.getBestTimes(simulation.eventType);
+        myBestTimes = bestData.myBest || [];
+        friendsBestTimes = bestData.friendsBest || [];
       } catch { /* no records yet */ }
 
       game.scene.start('RaceScene', {
@@ -73,6 +78,8 @@ export function RaceView({ simulation, playerLane, rewards, playerAppearance, st
         eventType: simulation.eventType,
         playerLane,
         records,
+        myBestTimes,
+        friendsBestTimes,
         playerAppearance,
         stadiumConfig,
         laneLabels,

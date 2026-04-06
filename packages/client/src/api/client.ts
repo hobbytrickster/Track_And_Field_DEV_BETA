@@ -78,6 +78,7 @@ export const api = {
 
   getRaceHistory: () => request('/race/history'),
   getRecords: () => request('/race/records'),
+  getBestTimes: (eventType: string) => request(`/race/best-times/${eventType}`),
 
   // Friends
   getFriendCode: () => request('/friends/code'),
