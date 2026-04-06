@@ -651,9 +651,13 @@ export function startCrowd() {
   if (crowdActive) return;
   crowdActive = true;
 
+  // Don't even create the audio element if muted
+  if (localStorage.getItem('winbig_muted') === 'true') return;
+
   crowdAudio = new Audio('/assets/audio/crowd.mp3');
   crowdAudio.loop = true;
   crowdAudio.volume = 0;
+  crowdAudio.muted = false;
 
   // Start at a random point in the 1-hour file (skip first/last 60s)
   const randomStart = 60 + Math.random() * 3400; // 60s to ~3460s
@@ -672,7 +676,14 @@ export function startCrowd() {
 export function setCrowdVolume(vol: number, fadeTime: number = 0.5) {
   if (!crowdAudio) return;
   const muted = localStorage.getItem('winbig_muted') === 'true';
-  crowdTargetVol = muted ? 0 : Math.max(0, Math.min(1, vol));
+  if (muted) {
+    crowdAudio.volume = 0;
+    crowdAudio.muted = true;
+    if (crowdFadeInterval !== null) { clearInterval(crowdFadeInterval); crowdFadeInterval = null; }
+    return;
+  }
+  crowdAudio.muted = false;
+  crowdTargetVol = Math.max(0, Math.min(1, vol));
 
   // Clear any existing fade
   if (crowdFadeInterval !== null) {
