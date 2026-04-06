@@ -484,44 +484,52 @@ export class RaceScene extends Phaser.Scene {
       window.speechSynthesis.getVoices();
     }
 
-    // Scale countdown timing by playback speed
-    const spd = this.playbackSpeed;
-    const d = (ms: number) => Math.round(ms / spd);
+    // Use manual timing instead of scene timers so speed changes take effect live
+    const startTime = Date.now();
+    let phase = 0; // 0=waiting, 1=marks, 2=set, 3=go
 
-    this.countdownText.setFontSize(36);
-    this.time.delayedCall(d(200), () => {
-      this.countdownText.setText('RUNNERS,\nTAKE YOUR MARKS!').setAlpha(1).setScale(1);
-      this.playAnnouncerSound('Runners, take your marks!');
-      setCrowdVolume(0.08, 1.2 / spd);
-      this.crowdState = 'countdown';
-    });
+    const countdownCheck = () => {
+      if (this.isPaused) { requestAnimationFrame(countdownCheck); return; }
+      const elapsed = (Date.now() - startTime) * this.playbackSpeed;
 
-    this.time.delayedCall(d(1800), () => {
-      this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
-      this.playAnnouncerSound('Set!');
-      setCrowdVolume(0.03, 0.5 / spd);
-    });
-
-    this.time.delayedCall(d(2800), () => {
-      this.playGunshot();
-      // Show GO! text briefly
-      this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
-      this.tweens.add({
-        targets: this.countdownText,
-        alpha: 0, scale: 1, duration: d(500), ease: 'Power2',
-      });
-      setCrowdVolume(0.5, 0.3);
-      this.crowdState = 'raceStart';
-      this.raceStartFrame = 0;
-      this.finishedCount = 0;
-      this.isPlaying = true;
-      this.lastUpdateTime = Date.now();
-      if (localStorage.getItem('winbig_muted') !== 'true') {
-        startMusic();
+      if (phase === 0 && elapsed >= 200) {
+        phase = 1;
+        this.countdownText.setFontSize(36);
+        this.countdownText.setText('RUNNERS,\nTAKE YOUR MARKS!').setAlpha(1).setScale(1);
+        this.playAnnouncerSound('Runners, take your marks!');
+        setCrowdVolume(0.08, 1.0);
+        this.crowdState = 'countdown';
       }
-    });
+      if (phase === 1 && elapsed >= 1800) {
+        phase = 2;
+        this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
+        this.playAnnouncerSound('Set!');
+        setCrowdVolume(0.03, 0.4);
+      }
+      if (phase === 2 && elapsed >= 2800) {
+        phase = 3;
+        this.playGunshot();
+        this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
+        this.tweens.add({
+          targets: this.countdownText,
+          alpha: 0, scale: 1, duration: Math.round(500 / this.playbackSpeed), ease: 'Power2',
+        });
+        setCrowdVolume(0.5, 0.3);
+        this.crowdState = 'raceStart';
+        this.raceStartFrame = 0;
+        this.finishedCount = 0;
+        this.isPlaying = true;
+        this.lastUpdateTime = Date.now();
+        if (localStorage.getItem('winbig_muted') !== 'true') {
+          startMusic();
+        }
+        return; // stop the countdown loop
+      }
+      requestAnimationFrame(countdownCheck);
+    };
+    requestAnimationFrame(countdownCheck);
 
-    // Dummy event to match old structure (not used, but keeps timing)
+    // Dummy event (not used, keeps structure)
     let idx = 0;
     this.time.addEvent({
       delay: 99999, repeat: 0,
