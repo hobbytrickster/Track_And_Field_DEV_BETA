@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(__dirname, '..', 'data.json');
+const DB_PATH = process.env.DATA_PATH || path.join(__dirname, '..', 'data.json');
 
 export interface DbSchema {
   users: DbUser[];

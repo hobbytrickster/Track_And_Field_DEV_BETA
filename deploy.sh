@@ -1,17 +1,5 @@
 #!/bin/bash
-# Win Big: Track and Field — Podman deployment script for AWS Lightsail
-#
-# Prerequisites on the Lightsail instance:
-#   sudo dnf install -y podman    (Amazon Linux 2023)
-#   -- or --
-#   sudo apt install -y podman    (Ubuntu)
-#
-# Usage:
-#   1. Clone the repo on your Lightsail instance
-#   2. Run: ./deploy.sh
-#   3. Access the game at http://<your-lightsail-ip>:8080
-#   4. API runs at http://<your-lightsail-ip>:3001
-
+# Win Big: Track and Field — Podman deployment script
 set -e
 
 echo ""
@@ -28,33 +16,29 @@ CONTAINER_NAME="winbig-track"
 IMAGE_NAME="winbig-track:latest"
 DATA_DIR="$(pwd)/gamedata"
 
-# Create persistent data directory
 mkdir -p "$DATA_DIR"
 
-# Stop and remove existing container
 echo "Stopping existing container..."
 podman stop $CONTAINER_NAME 2>/dev/null || true
 podman rm $CONTAINER_NAME 2>/dev/null || true
 
-# Build the container image
 echo "Building container image..."
 podman build -t $IMAGE_NAME -f Containerfile .
 
-# Run the container
 echo "Starting container..."
 podman run -d \
   --name $CONTAINER_NAME \
   --restart=always \
   -p 3001:3001 \
   -p 8080:8080 \
-  -v "$DATA_DIR:/app/packages/server:Z" \
+  -v "$DATA_DIR:/app/data:Z" \
   $IMAGE_NAME
 
 echo ""
 echo "✅ Deployment complete!"
 echo ""
-echo "  Game:  http://$(hostname -I | awk '{print $1}'):8080"
-echo "  API:   http://$(hostname -I | awk '{print $1}'):3001"
+echo "  Game:  http://$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}'):8080"
+echo "  API:   http://$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}'):3001"
 echo ""
 echo "  View logs:    podman logs -f $CONTAINER_NAME"
 echo "  Stop:         podman stop $CONTAINER_NAME"

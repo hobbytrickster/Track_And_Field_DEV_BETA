@@ -1,5 +1,4 @@
 # Win Big: Track and Field — Container image
-# Compatible with Podman and Docker
 FROM node:18-alpine
 
 WORKDIR /app
@@ -25,11 +24,14 @@ RUN cd packages/shared && npx tsc
 # Build client (Vite static bundle)
 RUN cd packages/client && npx vite build
 
-# Create a data directory for persistent storage
+# Data file lives inside the container at /app/data/
+# Mount a volume to /app/data/ for persistence
 RUN mkdir -p /app/data
 
 # Expose ports: 3001 = API server, 8080 = client static
 EXPOSE 3001 8080
 
-# Start both: API server + static file server for the client
-CMD ["sh", "-c", "npx tsx packages/server/src/index.ts & serve packages/client/dist -l 8080 -s --no-clipboard & wait"]
+# Start both servers. Server reads data from /app/data/data.json
+ENV DATA_PATH=/app/data/data.json
+
+CMD ["sh", "-c", "DATA_PATH=/app/data/data.json npx tsx packages/server/src/index.ts & serve packages/client/dist -l 8080 -s --no-clipboard & wait"]
