@@ -94,7 +94,8 @@ export function Collection({ onBack, onCustomize }: Props) {
               <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#888' }}>
                 {(selected as any).appearance ? 'Custom look applied' : 'Default look'}
               </div>
-              <button onClick={async () => {
+              <button onClick={async (e) => {
+                e.stopPropagation();
                 const t = selected.template;
                 const sellValues: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500 };
                 const value = sellValues[t?.rarity || 'bronze'] || 25;
@@ -104,7 +105,7 @@ export function Collection({ onBack, onCustomize }: Props) {
                     setAthletes(prev => prev.filter(a => a.id !== selected.id));
                     setSelected(null);
                     alert(`Sold for ${result.coinsEarned} coins! New balance: ${result.newBalance}`);
-                  } catch (err: any) { alert(err.message); }
+                  } catch (err: any) { alert('Sell failed: ' + err.message); }
                 }
               }} style={{
                 width: '100%', marginTop: 8, padding: '10px', fontSize: 14,
