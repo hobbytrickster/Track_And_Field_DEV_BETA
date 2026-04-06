@@ -18,9 +18,13 @@ export function getToken(): string | null {
 
 async function request(path: string, options: RequestInit = {}) {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
+
+  // Only set Content-Type for methods that send a body
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;

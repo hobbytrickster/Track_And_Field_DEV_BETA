@@ -85,13 +85,16 @@ export function Collection({ onBack, onCustomize }: Props) {
     let totalEarned = 0;
     let lastBalance = 0;
     let soldCount = 0;
+    const errors: string[] = [];
     for (const id of validIds) {
       try {
         const result = await api.releaseAthlete(id);
         totalEarned += result.coinsEarned;
         lastBalance = result.newBalance;
         soldCount++;
-      } catch { /* server blocked it (e.g. last athlete) — skip */ }
+      } catch (err: any) {
+        errors.push(err.message || 'Unknown error');
+      }
     }
 
     // Always refresh from server
@@ -108,7 +111,7 @@ export function Collection({ onBack, onCustomize }: Props) {
     if (soldCount > 0) {
       alert(`Sold ${soldCount} athlete${soldCount > 1 ? 's' : ''} for ${totalEarned} coins!\nNew balance: ${lastBalance}`);
     } else {
-      alert('No athletes were sold.');
+      alert('No athletes were sold.\n\n' + (errors.length > 0 ? 'Errors:\n' + errors.join('\n') : 'No errors captured.'));
     }
   };
 
