@@ -484,12 +484,17 @@ export class RaceScene extends Phaser.Scene {
       window.speechSynthesis.getVoices();
     }
 
-    // Use manual timing instead of scene timers so speed changes take effect live
+    // Use manual timing so speed changes take effect live
     const startTime = Date.now();
-    let phase = 0; // 0=waiting, 1=marks, 2=set, 3=go
+    let phase = 0;
+    let stopped = false;
+    const sceneRef = this; // capture reference to detect scene destruction
 
     const countdownCheck = () => {
+      // Stop if scene was destroyed/restarted or already stopped
+      if (stopped || !sceneRef.scene || !sceneRef.scene.isActive()) return;
       if (this.isPaused) { requestAnimationFrame(countdownCheck); return; }
+
       const elapsed = (Date.now() - startTime) * this.playbackSpeed;
 
       if (phase === 0 && elapsed >= 200) {
@@ -499,15 +504,14 @@ export class RaceScene extends Phaser.Scene {
         if (this.playbackSpeed <= 1) this.playAnnouncerSound('Runners, take your marks!');
         setCrowdVolume(0.08, 1.0);
         this.crowdState = 'countdown';
-      }
-      if (phase === 1 && elapsed >= 1800) {
+      } else if (phase === 1 && elapsed >= 1800) {
         phase = 2;
         this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
         if (this.playbackSpeed <= 1) this.playAnnouncerSound('Set!');
         setCrowdVolume(0.03, 0.4);
-      }
-      if (phase === 2 && elapsed >= 2800) {
+      } else if (phase === 2 && elapsed >= 2800) {
         phase = 3;
+        stopped = true;
         this.playGunshot();
         this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
         this.tweens.add({
@@ -523,7 +527,7 @@ export class RaceScene extends Phaser.Scene {
         if (localStorage.getItem('winbig_muted') !== 'true') {
           startMusic();
         }
-        return; // stop the countdown loop
+        return;
       }
       requestAnimationFrame(countdownCheck);
     };
