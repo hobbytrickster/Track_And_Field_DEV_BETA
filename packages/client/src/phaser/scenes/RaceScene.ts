@@ -380,7 +380,7 @@ export class RaceScene extends Phaser.Scene {
       v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Daniel') || v.name.includes('Samantha'))
     ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
     if (preferred) utter.voice = preferred;
-    utter.rate = 0.95;   // slightly slower = more natural
+    utter.rate = Math.min(2, 0.95 * this.playbackSpeed); // scale with speed, cap at 2x
     utter.pitch = 0.85;  // deeper = more authoritative
     utter.volume = 0.9;
     window.speechSynthesis.speak(utter);
@@ -479,34 +479,37 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private startCountdown() {
-    // Step 1: "Runners, Take Your Marks!" (1.2s)
-    // Step 2: "Set!" (1.0s)
-    // Step 3: *BANG* — race starts
-
-    // Pre-load voices (they're async in some browsers)
+    // Pre-load voices
     if ('speechSynthesis' in window) {
       window.speechSynthesis.getVoices();
     }
 
+    // Scale countdown timing by playback speed
+    const spd = this.playbackSpeed;
+    const d = (ms: number) => Math.round(ms / spd);
+
     this.countdownText.setFontSize(36);
-    this.time.delayedCall(200, () => {
+    this.time.delayedCall(d(200), () => {
       this.countdownText.setText('RUNNERS,\nTAKE YOUR MARKS!').setAlpha(1).setScale(1);
       this.playAnnouncerSound('Runners, take your marks!');
-      // Crowd quiets down for the start
-      setCrowdVolume(0.08, 1.2);
+      setCrowdVolume(0.08, 1.2 / spd);
       this.crowdState = 'countdown';
     });
 
-    this.time.delayedCall(1800, () => {
+    this.time.delayedCall(d(1800), () => {
       this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
       this.playAnnouncerSound('Set!');
-      setCrowdVolume(0.03, 0.5); // near silence
+      setCrowdVolume(0.03, 0.5 / spd);
     });
 
-    this.time.delayedCall(2800, () => {
+    this.time.delayedCall(d(2800), () => {
       this.playGunshot();
-      this.countdownText.setText('').setAlpha(0);
-      // Crowd erupts at the gun!
+      // Show GO! text briefly
+      this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
+      this.tweens.add({
+        targets: this.countdownText,
+        alpha: 0, scale: 1, duration: d(500), ease: 'Power2',
+      });
       setCrowdVolume(0.5, 0.3);
       this.crowdState = 'raceStart';
       this.raceStartFrame = 0;
