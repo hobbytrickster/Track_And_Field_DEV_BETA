@@ -55,20 +55,25 @@ export function Collection({ onBack, onCustomize }: Props) {
   };
 
   const sellSelected = async () => {
-    if (selectedIds.size === 0) return;
-    const totalValue = getSelectionValue();
-    const count = selectedIds.size;
+    // Filter to only IDs that still exist in athletes list
+    const validIds = Array.from(selectedIds).filter(id => athletes.some(a => a.id === id));
+    if (validIds.length === 0) { alert('No athletes selected.'); return; }
 
-    const names = Array.from(selectedIds).slice(0, 5).map(id => {
+    const count = validIds.length;
+    const totalValue = validIds.reduce((sum, id) => {
+      const a = athletes.find(x => x.id === id);
+      return sum + (a?.template ? (sellValues[a.template.rarity] || 25) : 25);
+    }, 0);
+
+    const names = validIds.slice(0, 5).map(id => {
       const a = athletes.find(x => x.id === id);
       return a?.template ? `${a.template.name} (${a.template.rarity})` : 'Unknown';
     });
     const nameList = names.join('\n  ') + (count > 5 ? `\n  ...and ${count - 5} more` : '');
 
     // Must keep at least 1 athlete
-    const remaining = athletes.length - count;
-    if (remaining < 1) {
-      alert(`You must keep at least 1 athlete! You have ${athletes.length} and are trying to sell ${count}.`);
+    if (athletes.length - count < 1) {
+      alert(`You must keep at least 1 athlete!\nYou have ${athletes.length} — select at most ${athletes.length - 1} to sell.`);
       return;
     }
 
@@ -79,28 +84,32 @@ export function Collection({ onBack, onCustomize }: Props) {
     setSelling(true);
     let totalEarned = 0;
     let lastBalance = 0;
-    const soldIds = new Set<string>();
-    for (const id of selectedIds) {
+    let soldCount = 0;
+    for (const id of validIds) {
       try {
         const result = await api.releaseAthlete(id);
         totalEarned += result.coinsEarned;
         lastBalance = result.newBalance;
-        soldIds.add(id);
-      } catch { /* skip failed ones */ }
+        soldCount++;
+      } catch { /* server blocked it (e.g. last athlete) — skip */ }
     }
-    // Refresh from server to ensure we're in sync
+
+    // Always refresh from server
     try {
       const fresh = await api.getAthletes();
       setAthletes(fresh);
-    } catch {
-      // Fallback: remove locally
-      setAthletes(prev => prev.filter(a => !soldIds.has(a.id)));
-    }
+    } catch {}
+
     setSelectedIds(new Set());
     setMultiSelect(false);
     setSelling(false);
     setSelected(null);
-    alert(`Sold ${soldIds.size} athlete${soldIds.size > 1 ? 's' : ''} for ${totalEarned} coins!\nNew balance: ${lastBalance}`);
+
+    if (soldCount > 0) {
+      alert(`Sold ${soldCount} athlete${soldCount > 1 ? 's' : ''} for ${totalEarned} coins!\nNew balance: ${lastBalance}`);
+    } else {
+      alert('No athletes were sold.');
+    }
   };
 
   return (
