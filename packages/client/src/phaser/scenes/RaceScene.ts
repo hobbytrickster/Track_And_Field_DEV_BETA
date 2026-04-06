@@ -1089,9 +1089,13 @@ export class RaceScene extends Phaser.Scene {
 
   private showPauseMenu() {
     this.isPaused = true;
+    // Pause scene timers (stops countdown, delayed calls, etc.)
+    this.time.paused = true;
     // Pause all audio
-    setCrowdVolume(0, 0.2);
+    setCrowdVolume(0, 0.1);
     setMusicVolume(0);
+    // Stop any speech synthesis (announcer)
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     const { W, H } = this;
 
     const container = this.add.container(0, 0).setDepth(100);
@@ -1142,6 +1146,8 @@ export class RaceScene extends Phaser.Scene {
 
   private hidePauseMenu() {
     this.isPaused = false;
+    // Resume scene timers
+    this.time.paused = false;
     // Resume audio
     setCrowdVolume(0.1, 0.3);
     setMusicVolume(0.3);
