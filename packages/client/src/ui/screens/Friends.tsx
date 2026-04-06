@@ -49,7 +49,7 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
   const refresh = async () => {
     const [friendsData, codeData, pendingData, allData] = await Promise.all([
       api.getFriends(), api.getFriendCode(), api.getPendingChallenges(), api.getChallengeList(),
-    ]);
+    ]).catch(() => [friends, myCode, pending, allChallenges]); // keep old data on error
     setFriends(friendsData);
     setMyCode(codeData.code);
     setPending(pendingData);
@@ -57,7 +57,12 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
     setLoading(false);
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    // Poll for updates every 10 seconds
+    const interval = setInterval(() => { refresh(); }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAdd = async () => {
     setError(''); setSuccess('');
