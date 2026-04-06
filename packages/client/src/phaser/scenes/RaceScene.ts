@@ -373,15 +373,16 @@ export class RaceScene extends Phaser.Scene {
   private playAnnouncerSound(text: string) {
     if (!('speechSynthesis' in window)) return;
     if (localStorage.getItem('winbig_muted') === 'true') return;
+    // Cancel any previous speech first to prevent overlapping
+    window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    // Pick the most natural-sounding English voice available
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(v =>
       v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Daniel') || v.name.includes('Samantha'))
     ) || voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
     if (preferred) utter.voice = preferred;
-    utter.rate = Math.min(2, 0.95 * this.playbackSpeed); // scale with speed, cap at 2x
-    utter.pitch = 0.85;  // deeper = more authoritative
+    utter.rate = Math.min(2, 0.95 * this.playbackSpeed);
+    utter.pitch = 0.85;
     utter.volume = 0.9;
     window.speechSynthesis.speak(utter);
   }
@@ -485,17 +486,22 @@ export class RaceScene extends Phaser.Scene {
     }
 
     // Use manual timing so speed changes take effect live
-    const startTime = Date.now();
+    let lastTickTime = Date.now();
+    let accumulatedMs = 0;
     let phase = 0;
     let stopped = false;
-    const sceneRef = this; // capture reference to detect scene destruction
+    const sceneRef = this;
 
     const countdownCheck = () => {
-      // Stop if scene was destroyed/restarted or already stopped
       if (stopped || !sceneRef.scene || !sceneRef.scene.isActive()) return;
-      if (this.isPaused) { requestAnimationFrame(countdownCheck); return; }
+      if (this.isPaused) { lastTickTime = Date.now(); requestAnimationFrame(countdownCheck); return; }
 
-      const elapsed = (Date.now() - startTime) * this.playbackSpeed;
+      const now = Date.now();
+      const dt = now - lastTickTime;
+      lastTickTime = now;
+      // Accumulate time scaled by current speed, cap at 100ms to prevent jumps
+      accumulatedMs += Math.min(dt, 100) * this.playbackSpeed;
+      const elapsed = accumulatedMs;
 
       if (phase === 0 && elapsed >= 200) {
         phase = 1;
