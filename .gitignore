@@ -1,0 +1,11 @@
+node_modules/
+dist/
+packages/shared/dist/
+packages/client/dist/
+*.db
+data.json
+.env
+*.log
+/tmp/
+.DS_Store
+package-lock.json
