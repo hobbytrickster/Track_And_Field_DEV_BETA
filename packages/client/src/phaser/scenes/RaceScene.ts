@@ -333,12 +333,8 @@ export class RaceScene extends Phaser.Scene {
         backgroundColor: '#22222288', padding: { x: 10, y: 5 },
       }).setOrigin(0.5, 1).setDepth(10).setInteractive({ useHandCursor: true });
       btn.on('pointerdown', () => {
-        // Recalculate wall time reference so current frame position is preserved at new speed
-        const msPerTick = 1000 / 60;
-        const currentTimeMs = this.currentFrame * msPerTick;
-        const newSpeed = [1, 2, 4][i];
-        this.raceStartWallTime = Date.now() - this.pausedTimeAccum - (currentTimeMs / newSpeed);
-        this.playbackSpeed = newSpeed;
+        this.playbackSpeed = [1, 2, 4][i];
+        this.frameAccum = 0; // reset accumulator on speed change
         this.speedBtns.forEach((b, j) => b.setColor(j === i ? '#FFD700' : '#aaa'));
       });
       this.speedBtns.push(btn);
@@ -513,8 +509,7 @@ export class RaceScene extends Phaser.Scene {
       this.raceStartFrame = 0;
       this.finishedCount = 0;
       this.isPlaying = true;
-      this.raceStartWallTime = Date.now();
-      this.pausedTimeAccum = 0;
+      this.lastUpdateTime = Date.now();
       if (localStorage.getItem('winbig_muted') !== 'true') {
         startMusic();
       }
@@ -528,19 +523,34 @@ export class RaceScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, _delta: number) {
+  private lastUpdateTime: number = 0;
+
+  update(_time: number, delta: number) {
     if (!this.isPlaying || this.raceFinished || this.isPaused) return;
 
-    // Use wall clock time to determine which frame we should be on.
-    // Jump directly to the target frame — no intermediate processing needed
-    // since applyFrame sets all positions absolutely.
-    const msPerTick = 1000 / 60;
-    const elapsedMs = (Date.now() - this.raceStartWallTime - this.pausedTimeAccum) * this.playbackSpeed;
-    const targetFrame = Math.min(Math.floor(elapsedMs / msPerTick), this.frames.length);
+    // Use real delta but detect background tab returns via large gaps
+    const now = Date.now();
+    if (this.lastUpdateTime === 0) this.lastUpdateTime = now;
+    const realDelta = now - this.lastUpdateTime;
+    this.lastUpdateTime = now;
 
-    if (targetFrame > this.currentFrame && targetFrame <= this.frames.length) {
-      this.currentFrame = targetFrame;
-      this.applyFrame(this.frames[this.currentFrame - 1]);
+    // If we were backgrounded (realDelta > 200ms), fast-forward to catch up
+    if (realDelta > 200) {
+      // Skip ahead by the missed time
+      const missedFrames = Math.floor((realDelta * this.playbackSpeed) / (1000 / 60));
+      this.currentFrame = Math.min(this.currentFrame + missedFrames, this.frames.length);
+      if (this.currentFrame > 0 && this.currentFrame <= this.frames.length) {
+        this.applyFrame(this.frames[this.currentFrame - 1]);
+      }
+    } else {
+      // Normal smooth playback using delta
+      this.frameAccum += delta * this.playbackSpeed;
+      const msPerTick = 1000 / 60;
+      while (this.frameAccum >= msPerTick && this.currentFrame < this.frames.length) {
+        this.frameAccum -= msPerTick;
+        this.applyFrame(this.frames[this.currentFrame]);
+        this.currentFrame++;
+      }
     }
 
     if (this.currentFrame >= this.frames.length && !this.raceFinished) {
@@ -1180,7 +1190,7 @@ export class RaceScene extends Phaser.Scene {
 
   private hidePauseMenu() {
     this.isPaused = false;
-    this.pausedTimeAccum += Date.now() - this.pauseStartTime;
+    this.lastUpdateTime = Date.now(); // reset so pause isn't treated as background tab
     this.time.paused = false;
     // Only restore audio if not globally muted
     const isMuted = localStorage.getItem('winbig_muted') === 'true';
