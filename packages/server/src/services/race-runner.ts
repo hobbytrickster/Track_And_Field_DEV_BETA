@@ -143,31 +143,28 @@ export function runRace(request: RaceRequest): {
     });
   }
 
-  // Update world records — only player results count (not bots)
+  // Save every race time for the player (keep top 10 per user per event)
   const playerResult = simulation.results.find(r => r.lane === 4);
   if (playerResult && playerResult.finishTimeMs < 999999) {
     if (!db.records) db.records = [];
-    const eventRecords = db.records.filter(r => r.eventType === eventType);
-    // Keep top 3 per event
-    const isRecord = eventRecords.length < 3 ||
-      playerResult.finishTimeMs < Math.max(...eventRecords.map(r => r.finishTimeMs));
-    if (isRecord) {
-      db.records.push({
-        eventType,
-        finishTimeMs: playerResult.finishTimeMs,
-        displayName: user.displayName,
-        userId,
-        raceId,
-        setAt: new Date().toISOString(),
-      });
-      // Keep only top 3 per event
-      db.records = [
-        ...db.records.filter(r => r.eventType !== eventType),
-        ...db.records
-          .filter(r => r.eventType === eventType)
-          .sort((a, b) => a.finishTimeMs - b.finishTimeMs)
-          .slice(0, 3),
-      ];
+    db.records.push({
+      eventType,
+      finishTimeMs: playerResult.finishTimeMs,
+      displayName: user.displayName,
+      userId,
+      raceId,
+      setAt: new Date().toISOString(),
+    });
+    // Keep only top 10 per user per event
+    const userEventRecords = db.records
+      .filter(r => r.eventType === eventType && r.userId === userId)
+      .sort((a, b) => a.finishTimeMs - b.finishTimeMs);
+    if (userEventRecords.length > 10) {
+      const keep = new Set(userEventRecords.slice(0, 10).map(r => r.raceId + r.finishTimeMs));
+      db.records = db.records.filter(r =>
+        !(r.eventType === eventType && r.userId === userId) ||
+        keep.has(r.raceId + r.finishTimeMs)
+      );
     }
   }
 
@@ -346,22 +343,23 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
       user.coins += ECONOMY.levelUpBonus;
     }
 
-    // Update personal records
+    // Save race time (keep top 10 per user per event)
     if (result.finishTimeMs < 999999) {
       if (!db.records) db.records = [];
-      const eventRecords = db.records.filter(r => r.eventType === eventType && r.userId === entry.userId);
-      const isRecord = eventRecords.length < 3 || result.finishTimeMs < Math.max(...eventRecords.map(r => r.finishTimeMs));
-      if (isRecord) {
-        db.records.push({
-          eventType, finishTimeMs: result.finishTimeMs,
-          displayName: user.displayName, userId: entry.userId,
-          raceId: challengeId, setAt: new Date().toISOString(),
-        });
-        db.records = [
-          ...db.records.filter(r => !(r.eventType === eventType && r.userId === entry.userId)),
-          ...db.records.filter(r => r.eventType === eventType && r.userId === entry.userId)
-            .sort((a, b) => a.finishTimeMs - b.finishTimeMs).slice(0, 3),
-        ];
+      db.records.push({
+        eventType, finishTimeMs: result.finishTimeMs,
+        displayName: user.displayName, userId: entry.userId,
+        raceId: challengeId, setAt: new Date().toISOString(),
+      });
+      const userEventRecs = db.records
+        .filter(r => r.eventType === eventType && r.userId === entry.userId)
+        .sort((a, b) => a.finishTimeMs - b.finishTimeMs);
+      if (userEventRecs.length > 10) {
+        const keep = new Set(userEventRecs.slice(0, 10).map(r => r.raceId + r.finishTimeMs));
+        db.records = db.records.filter(r =>
+          !(r.eventType === eventType && r.userId === entry.userId) ||
+          keep.has(r.raceId + r.finishTimeMs)
+        );
       }
     }
   }

@@ -1181,14 +1181,21 @@ export class RaceScene extends Phaser.Scene {
     this.time.delayedCall(100, () => this.showResults());
   }
 
-  private showResults() {
+  private async showResults() {
     stopMusic();
     setCrowdVolume(0, 1.0);
     this.time.delayedCall(1500, () => stopCrowd());
-    // Play fanfare — victory if player won
     const playerResult = this.results.find(r => r.lane === this.playerLane);
     const isVictory = playerResult?.finishPosition === 1;
     playFanfare(isVictory);
+
+    // Fetch fresh best times (includes the just-completed race)
+    try {
+      const { api } = await import('../../api/client');
+      const bestData = await api.getBestTimes(this.eventType);
+      this.myBestTimes = bestData.myBest || [];
+      this.friendsBestTimes = bestData.friendsBest || [];
+    } catch { /* use whatever we had */ }
 
     const { W, H } = this;
 
