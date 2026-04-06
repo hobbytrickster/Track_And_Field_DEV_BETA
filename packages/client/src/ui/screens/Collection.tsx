@@ -65,6 +65,13 @@ export function Collection({ onBack, onCustomize }: Props) {
     });
     const nameList = names.join('\n  ') + (count > 5 ? `\n  ...and ${count - 5} more` : '');
 
+    // Must keep at least 1 athlete
+    const remaining = athletes.length - count;
+    if (remaining < 1) {
+      alert(`You must keep at least 1 athlete! You have ${athletes.length} and are trying to sell ${count}.`);
+      return;
+    }
+
     if (!window.confirm(
       `Sell ${count} athlete${count > 1 ? 's' : ''}?\n\n  ${nameList}\n\nTotal value: ${totalValue} coins\nThis cannot be undone!`
     )) return;
@@ -72,18 +79,28 @@ export function Collection({ onBack, onCustomize }: Props) {
     setSelling(true);
     let totalEarned = 0;
     let lastBalance = 0;
+    const soldIds = new Set<string>();
     for (const id of selectedIds) {
       try {
         const result = await api.releaseAthlete(id);
         totalEarned += result.coinsEarned;
         lastBalance = result.newBalance;
+        soldIds.add(id);
       } catch { /* skip failed ones */ }
     }
-    setAthletes(prev => prev.filter(a => !selectedIds.has(a.id)));
+    // Refresh from server to ensure we're in sync
+    try {
+      const fresh = await api.getAthletes();
+      setAthletes(fresh);
+    } catch {
+      // Fallback: remove locally
+      setAthletes(prev => prev.filter(a => !soldIds.has(a.id)));
+    }
     setSelectedIds(new Set());
     setMultiSelect(false);
     setSelling(false);
-    alert(`Sold ${count} athlete${count > 1 ? 's' : ''} for ${totalEarned} coins!\nNew balance: ${lastBalance}`);
+    setSelected(null);
+    alert(`Sold ${soldIds.size} athlete${soldIds.size > 1 ? 's' : ''} for ${totalEarned} coins!\nNew balance: ${lastBalance}`);
   };
 
   return (
@@ -194,13 +211,15 @@ export function Collection({ onBack, onCustomize }: Props) {
               </div>
               <button onClick={async (e) => {
                 e.stopPropagation();
+                if (athletes.length <= 1) { alert('You must keep at least 1 athlete!'); return; }
                 const t = selected.template;
                 const value = sellValues[t?.rarity || 'bronze'] || 25;
                 if (window.confirm(`Sell ${t?.name || 'this athlete'}? (${t?.rarity} ${t?.overallRating} OVR)\n\nYou'll receive ${value} coins.\nThis cannot be undone!`)) {
                   try {
                     const result = await api.releaseAthlete(selected.id);
-                    setAthletes(prev => prev.filter(a => a.id !== selected.id));
                     setSelected(null);
+                    const fresh = await api.getAthletes();
+                    setAthletes(fresh);
                     alert(`Sold for ${result.coinsEarned} coins! New balance: ${result.newBalance}`);
                   } catch (err: any) { alert('Sell failed: ' + err.message); }
                 }

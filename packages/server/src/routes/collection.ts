@@ -111,6 +111,10 @@ export function registerCollectionRoutes(app: FastifyInstance) {
     const idx = db.userAthletes.findIndex(a => a.id === id && a.userId === userId);
     if (idx === -1) return reply.status(404).send({ error: 'Athlete not found' });
 
+    // Must keep at least 1 athlete
+    const userAthleteCount = db.userAthletes.filter(a => a.userId === userId).length;
+    if (userAthleteCount <= 1) return reply.status(400).send({ error: 'You must keep at least 1 athlete!' });
+
     const athleteRow = db.userAthletes[idx];
     const template = ATHLETE_TEMPLATES.find(t => t.id === athleteRow.cardId);
     const sellValue = template ? (ECONOMY.sellValues[template.rarity] || 25) : 25;
