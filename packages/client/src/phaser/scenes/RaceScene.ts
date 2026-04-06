@@ -496,14 +496,14 @@ export class RaceScene extends Phaser.Scene {
         phase = 1;
         this.countdownText.setFontSize(36);
         this.countdownText.setText('RUNNERS,\nTAKE YOUR MARKS!').setAlpha(1).setScale(1);
-        this.playAnnouncerSound('Runners, take your marks!');
+        if (this.playbackSpeed <= 1) this.playAnnouncerSound('Runners, take your marks!');
         setCrowdVolume(0.08, 1.0);
         this.crowdState = 'countdown';
       }
       if (phase === 1 && elapsed >= 1800) {
         phase = 2;
         this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
-        this.playAnnouncerSound('Set!');
+        if (this.playbackSpeed <= 1) this.playAnnouncerSound('Set!');
         setCrowdVolume(0.03, 0.4);
       }
       if (phase === 2 && elapsed >= 2800) {
