@@ -510,7 +510,9 @@ export class RaceScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (!this.isPlaying || this.raceFinished || this.isPaused) return;
-    this.frameAccum += delta * this.playbackSpeed;
+    // Cap delta at 100ms to prevent huge catch-up jumps after tab switch
+    const cappedDelta = Math.min(delta, 100);
+    this.frameAccum += cappedDelta * this.playbackSpeed;
     const msPerTick = 1000 / 60;
     while (this.frameAccum >= msPerTick && this.currentFrame < this.frames.length) {
       this.frameAccum -= msPerTick;

@@ -40,6 +40,8 @@ export function RaceView({ simulation, playerLane, rewards, playerAppearance, st
       parent: containerRef.current,
       backgroundColor: '#0a1628',
       scene: [RaceScene],
+      disableVisibilityChange: true, // keep running when tab loses focus
+      fps: { target: 60, forceSetTimeOut: true }, // use setTimeout instead of rAF so browser doesn't throttle
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
