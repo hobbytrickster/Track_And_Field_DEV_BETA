@@ -119,6 +119,9 @@ export class RaceScene extends Phaser.Scene {
     this.eventType = data.eventType;
     this.playerLane = data.playerLane;
     this.raceDistance = data.eventType === '200m' ? 200 : data.eventType === '400m' ? 400 : 800;
+    this.playbackSpeed = 1;
+    this.frameAccum = 0;
+    this.lastUpdateTime = 0;
     this.records = data.records || [];
     this.myBestTimes = data.myBestTimes || [];
     this.friendsBestTimes = data.friendsBestTimes || [];
