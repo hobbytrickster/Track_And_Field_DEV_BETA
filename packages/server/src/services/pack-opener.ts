@@ -8,6 +8,7 @@ import {
   Rarity,
   PACK_CONTENTS,
   PACK_DROP_RATES,
+  generateAthleteName,
   BOOST_DROP_RATES,
   ATHLETE_TEMPLATES,
   BOOST_TEMPLATES,
@@ -40,10 +41,21 @@ export function openPack(userId: string, packType: PackType): PackContents {
   const athletes: AthleteCardTemplate[] = [];
   const boosts: BoostCardTemplate[] = [];
 
+  // Collect existing names to avoid duplicates
+  const existingNames = new Set(db.userAthletes.map(a => {
+    const t = ATHLETE_TEMPLATES.find(t2 => t2.id === a.cardId);
+    return (a as any).appearance?.customName || t?.name || '';
+  }));
+
   for (let i = 0; i < contents.athletes; i++) {
     const rarity = pickRarity(athleteRates);
     const template = pickTemplate(ATHLETE_TEMPLATES, rarity);
-    athletes.push(template);
+
+    // Generate a unique name for this packed card
+    const { fullName, nationality } = generateAthleteName(existingNames);
+    existingNames.add(fullName);
+    const namedTemplate = { ...template, name: fullName, nationality };
+    athletes.push(namedTemplate);
 
     // Generate a random appearance for each packed athlete
     const HAIR_COLORS = [0x222222, 0x4a3000, 0x8B4513, 0xDAA520, 0xCC3300, 0x888888, 0x111111];
@@ -58,6 +70,7 @@ export function openPack(userId: string, packType: PackType): PackContents {
       shortsColor: SHORTS_POOL[Math.floor(Math.random() * SHORTS_POOL.length)],
       shoeColor: SHOE_POOL[Math.floor(Math.random() * SHOE_POOL.length)],
       accessory: Math.random() < 0.2 ? Math.floor(Math.random() * 3) + 1 : 0,
+      customName: fullName,
     };
 
     db.userAthletes.push({

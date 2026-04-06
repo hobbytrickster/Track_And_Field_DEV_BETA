@@ -122,10 +122,53 @@ export const PACK_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
 // ============================================================
 // Seed Data: Athlete Card Templates
 // ============================================================
-const NATIONALITIES = ['USA', 'JAM', 'GBR', 'KEN', 'ETH', 'RSA', 'CAN', 'JPN', 'GER', 'FRA', 'NGA', 'AUS', 'BRA', 'TTO', 'CHN'];
+export const NATIONALITIES = ['USA', 'JAM', 'GBR', 'KEN', 'ETH', 'RSA', 'CAN', 'JPN', 'GER', 'FRA', 'NGA', 'AUS', 'BRA', 'TTO', 'CHN',
+  'ITA', 'ESP', 'NED', 'SWE', 'NOR', 'POL', 'TUR', 'KOR', 'NZL', 'IRL', 'CUB', 'COL', 'MEX', 'BAH', 'TRI'];
 
-const FIRST_NAMES = ['Marcus', 'Devon', 'Andre', 'Kai', 'Tyrell', 'Isaiah', 'Mateo', 'Riku', 'Pierre', 'Kofi', 'Liam', 'Dante', 'Elijah', 'Oscar', 'Jabari', 'Nico', 'Samson', 'Zane', 'Idris', 'Felix', 'Darius', 'Leon', 'Xavier', 'Troy', 'Hugo', 'Amari', 'Jalen', 'Kato', 'Noel', 'Remy', 'Theo', 'Axel', 'Cyrus', 'Deon', 'Emeka', 'Flynn', 'Gavin', 'Hiro', 'Ivan', 'Jules'];
-const LAST_NAMES = ['Thompson', 'Blake', 'Williams', 'Nakamura', 'Dubois', 'Mensah', 'Rodriguez', 'Chen', 'Smith', 'Okafor', 'Mueller', 'Santos', 'Richards', 'Kimura', 'Laurent', 'Osei', 'Garcia', 'Patel', 'Brown', 'Diallo', 'Taylor', 'Sato', 'Martin', 'Owens', 'Nguyen', 'Costa', 'Harper', 'Yamamoto', 'Reid', 'Bakari', 'Fletcher', 'Wagner', 'Cruz', 'Adeyemi', 'Campbell', 'Hoffman', 'Lima', 'Suzuki', 'Fraser', 'Keita'];
+const FIRST_NAMES = [
+  'Marcus','Devon','Andre','Kai','Tyrell','Isaiah','Mateo','Riku','Pierre','Kofi',
+  'Liam','Dante','Elijah','Oscar','Jabari','Nico','Samson','Zane','Idris','Felix',
+  'Darius','Leon','Xavier','Troy','Hugo','Amari','Jalen','Kato','Noel','Remy',
+  'Theo','Axel','Cyrus','Deon','Emeka','Flynn','Gavin','Hiro','Ivan','Jules',
+  'Aiden','Bakari','Caleb','Diego','Esteban','Frantz','Gideon','Hassan','Ichiro','Jamal',
+  'Kwame','Leandro','Malik','Naveen','Omari','Pavel','Quincy','Rafael','Soren','Tariq',
+  'Uri','Viktor','Winston','Yuki','Zuri','Ashton','Bodhi','Cormac','Declan','Ezra',
+  'Finnegan','Giovanni','Hector','Isiah','Joaquin','Kendrick','Lorenzo','Matteo','Nikolai','Orlando',
+  'Preston','Quentin','Roman','Santiago','Tobias','Ulysses','Vaughn','Wesley','Xander','Yosef',
+  'Arlo','Beckett','Cassius','Daxton','Ellis','Fabian','Griffin','Hendrix','Iker','Jensen',
+  'Killian','Lucian','Memphis','Nash','Oakley','Phoenix','Reed','Sterling','Tatum','Usain',
+  'Vance','Warren','Zayn','Abel','Bruno','Colton','Drake','Emmett','Ford','Grant',
+];
+const LAST_NAMES = [
+  'Thompson','Blake','Williams','Nakamura','Dubois','Mensah','Rodriguez','Chen','Smith','Okafor',
+  'Mueller','Santos','Richards','Kimura','Laurent','Osei','Garcia','Patel','Brown','Diallo',
+  'Taylor','Sato','Martin','Owens','Nguyen','Costa','Harper','Yamamoto','Reid','Bakari',
+  'Fletcher','Wagner','Cruz','Adeyemi','Campbell','Hoffman','Lima','Suzuki','Fraser','Keita',
+  'Anderson','Bennett','Chambers','Dixon','Edwards','Fisher','Graham','Harris','Ingram','Jackson',
+  'Kennedy','Lawson','Mitchell','Nelson','Oliver','Palmer','Quinn','Robinson','Stevens','Tucker',
+  'Underwood','Vasquez','Walsh','Young','Zimmerman','Abbott','Boyd','Caldwell','Dawson','Evans',
+  'Fox','Gordon','Hayes','Irving','Jordan','Knox','Logan','Mason','Norris','Ortiz',
+  'Pierce','Ramsey','Shaw','Tate','Upton','Vega','Webb','York','Ziegler','Archer',
+  'Banks','Cooper','Drake','Ellis','Foster','Gibson','Hunt','James','King','Lane',
+  'Monroe','Nolan','Park','Reeves','Stone','Torres','Vale','Winters','Xu','Yates',
+  'Armstrong','Barton','Clarke','Douglas','Emerson','Franklin','Grant','Holloway','Iverson','Jennings',
+];
+
+/** Generate a random athlete name. Avoids names in the usedNames set. */
+export function generateAthleteName(usedNames?: Set<string>): { firstName: string; lastName: string; fullName: string; nationality: string } {
+  let fullName: string;
+  let firstName: string;
+  let lastName: string;
+  let attempts = 0;
+  do {
+    firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+    lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    fullName = `${firstName} ${lastName}`;
+    attempts++;
+  } while (usedNames?.has(fullName) && attempts < 50);
+  const nationality = NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
+  return { firstName, lastName, fullName, nationality };
+}
 
 const FLAVOR_TEXTS_200 = [
   'Explosive out of the blocks.', 'Pure speed demon.', 'Born to sprint.',
