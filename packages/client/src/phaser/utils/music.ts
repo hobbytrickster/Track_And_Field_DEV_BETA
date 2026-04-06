@@ -16,7 +16,7 @@ function getCtx(): AudioContext {
   if (!audioCtx) {
     audioCtx = new AudioContext();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.3;
+    masterGain.gain.value = localStorage.getItem('winbig_muted') === 'true' ? 0 : 0.3;
     masterGain.connect(audioCtx.destination);
   }
   return audioCtx;
@@ -471,7 +471,7 @@ function getMenuCtx(): AudioContext {
   if (!menuCtx) {
     menuCtx = new AudioContext();
     menuGain = menuCtx.createGain();
-    menuGain.gain.value = 0.45;
+    menuGain.gain.value = localStorage.getItem('winbig_muted') === 'true' ? 0 : 0.45;
     menuGain.connect(menuCtx.destination);
   }
   return menuCtx;
@@ -581,6 +581,7 @@ export function stopMenuMusic() {
 // ═══════════════════════════════════════════════════════════
 
 export function playFanfare(isVictory: boolean = false) {
+  if (localStorage.getItem('winbig_muted') === 'true') return;
   const ctx = new AudioContext();
   const gain = ctx.createGain();
   gain.gain.value = 0.25;
@@ -689,8 +690,12 @@ export function setCrowdVolume(vol: number, fadeTime: number = 0.5) {
   crowdFadeInterval = window.setInterval(() => {
     step++;
     if (!crowdAudio) { clearInterval(crowdFadeInterval!); crowdFadeInterval = null; return; }
+    // Check mute on every step
+    if (localStorage.getItem('winbig_muted') === 'true') {
+      crowdAudio.volume = 0;
+      clearInterval(crowdFadeInterval!); crowdFadeInterval = null; return;
+    }
     const t = step / steps;
-    // Smooth ease
     const ease = t * t * (3 - 2 * t);
     crowdAudio.volume = Math.max(0, Math.min(1, startVol + diff * ease));
     if (step >= steps) {
