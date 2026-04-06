@@ -52,7 +52,7 @@ function App() {
     const handleClick = () => {
       if (!musicStarted) {
         setMusicStarted(true);
-        if (user) startMenuMusic();
+        if (user && localStorage.getItem('winbig_muted') !== 'true') startMenuMusic();
       }
     };
     document.addEventListener('click', handleClick, { once: false });

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { RaceFrame, RunnerFrame, RaceResult, EventType } from '@track-stars/shared';
-import { startMusic, stopMusic, setMusicVolume, playFanfare, startCrowd, setCrowdVolume, stopCrowd } from '../utils/music';
+import { startMusic, stopMusic, setMusicVolume, playFanfare, startCrowd, setCrowdVolume, stopCrowd, stopMenuMusic } from '../utils/music';
 import {
   drawTrack,
   getTrackPoint,
@@ -362,9 +362,10 @@ export class RaceScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5, 0.5).setAlpha(0).setDepth(20);
 
-    // Start crowd roar at scene load
+    // Start crowd roar at scene load (if not muted)
+    const globalMuted = localStorage.getItem('winbig_muted') === 'true';
     startCrowd();
-    setCrowdVolume(0.45, 0.5); // roar as athletes take the field
+    setCrowdVolume(globalMuted ? 0 : 0.45, 0.5);
     this.crowdState = 'idle';
 
     this.startCountdown();
@@ -372,6 +373,7 @@ export class RaceScene extends Phaser.Scene {
 
   private playAnnouncerSound(text: string) {
     if (!('speechSynthesis' in window)) return;
+    if (localStorage.getItem('winbig_muted') === 'true') return;
     const utter = new SpeechSynthesisUtterance(text);
     // Pick the most natural-sounding English voice available
     const voices = window.speechSynthesis.getVoices();
@@ -386,6 +388,7 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private playGunshot() {
+    if (localStorage.getItem('winbig_muted') === 'true') return;
     const ctx = new AudioContext();
     const t = ctx.currentTime;
 
@@ -512,7 +515,9 @@ export class RaceScene extends Phaser.Scene {
       this.isPlaying = true;
       this.raceStartWallTime = Date.now();
       this.pausedTimeAccum = 0;
-      startMusic();
+      if (localStorage.getItem('winbig_muted') !== 'true') {
+        startMusic();
+      }
     });
 
     // Dummy event to match old structure (not used, but keeps timing)
@@ -1130,7 +1135,7 @@ export class RaceScene extends Phaser.Scene {
     container.add(overlay);
 
     // Panel
-    const pw = 340, ph = 300;
+    const pw = 340, ph = 360;
     const panel = this.add.rectangle(W / 2, H / 2, pw, ph, 0x1a1a1a, 0.95)
       .setStrokeStyle(2, 0xcc2244);
     container.add(panel);
@@ -1153,13 +1158,29 @@ export class RaceScene extends Phaser.Scene {
       bg.on('pointerdown', onClick);
       container.add(bg);
       container.add(txt);
+      return { bg, txt };
     };
 
-    const baseY = H / 2 - 70;
+    const baseY = H / 2 - 90;
     btnStyle(baseY, 'RESUME', '#44aa44', () => this.hidePauseMenu());
     btnStyle(baseY + 55, 'RESTART', '#4488cc', () => this.restartRace());
     btnStyle(baseY + 110, 'SKIP TO END', '#cc8844', () => this.skipToEnd());
-    btnStyle(baseY + 165, 'EXIT', '#cc2244', () => {
+
+    // Mute toggle
+    const isMuted = localStorage.getItem('winbig_muted') === 'true';
+    const muteBtn = btnStyle(baseY + 165, isMuted ? '🔇 UNMUTE' : '🔊 MUTE', '#555555', () => {
+      const nowMuted = localStorage.getItem('winbig_muted') === 'true';
+      const newMuted = !nowMuted;
+      localStorage.setItem('winbig_muted', newMuted ? 'true' : 'false');
+      muteBtn.txt.setText(newMuted ? '🔇 UNMUTE' : '🔊 MUTE');
+      if (newMuted) {
+        setMusicVolume(0);
+        setCrowdVolume(0, 0.1);
+      }
+      // Audio will restore on resume if not muted
+    });
+
+    btnStyle(baseY + 220, 'EXIT', '#cc2244', () => {
       this.hidePauseMenu();
       stopMusic();
       stopCrowd();
@@ -1173,8 +1194,12 @@ export class RaceScene extends Phaser.Scene {
     this.isPaused = false;
     this.pausedTimeAccum += Date.now() - this.pauseStartTime;
     this.time.paused = false;
-    setCrowdVolume(0.1, 0.3);
-    setMusicVolume(0.3);
+    // Only restore audio if not globally muted
+    const isMuted = localStorage.getItem('winbig_muted') === 'true';
+    if (!isMuted) {
+      setCrowdVolume(0.1, 0.3);
+      setMusicVolume(0.3);
+    }
     if (this.pauseMenu) {
       this.pauseMenu.destroy();
       this.pauseMenu = null;

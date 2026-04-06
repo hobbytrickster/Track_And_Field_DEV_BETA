@@ -434,7 +434,8 @@ export function stopMusic() {
 
 export function setMusicVolume(vol: number) {
   if (masterGain) {
-    masterGain.gain.value = Math.max(0, Math.min(1, vol));
+    const muted = localStorage.getItem('winbig_muted') === 'true';
+    masterGain.gain.value = muted ? 0 : Math.max(0, Math.min(1, vol));
   }
 }
 
@@ -669,7 +670,8 @@ export function startCrowd() {
 
 export function setCrowdVolume(vol: number, fadeTime: number = 0.5) {
   if (!crowdAudio) return;
-  crowdTargetVol = Math.max(0, Math.min(1, vol));
+  const muted = localStorage.getItem('winbig_muted') === 'true';
+  crowdTargetVol = muted ? 0 : Math.max(0, Math.min(1, vol));
 
   // Clear any existing fade
   if (crowdFadeInterval !== null) {

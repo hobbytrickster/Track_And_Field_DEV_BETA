@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAudioMute } from '../../hooks/useAudioMute';
 
 interface Props {
   user: { displayName: string; coins: number; level: number; xp: number; wins: number; losses: number };
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export function MainMenu({ user, onNavigate, onLogout }: Props) {
+  const { muted, toggle: toggleMute } = useAudioMute();
+
   // Inject shimmer animation
   React.useEffect(() => {
     if (document.getElementById('shimmer-style')) return;
@@ -51,6 +54,10 @@ export function MainMenu({ user, onNavigate, onLogout }: Props) {
           }}>
             {user.coins} coins
           </div>
+          <button onClick={toggleMute} style={{
+            background: muted ? '#cc2244' : '#333', border: '1px solid #555', color: '#fff',
+            padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 16,
+          }}>{muted ? '🔇' : '🔊'}</button>
           <button onClick={onLogout} style={{
             background: 'none', border: '1px solid #444', color: '#888',
             padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12,
