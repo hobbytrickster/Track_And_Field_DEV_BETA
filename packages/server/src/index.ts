@@ -17,9 +17,9 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 async function main() {
   const app = Fastify({ logger: true });
 
-  // CORS for dev
+  // CORS - allow all origins for now (restrict in production with a domain)
   await app.register(cors, {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: true,
     credentials: true,
   });
 
