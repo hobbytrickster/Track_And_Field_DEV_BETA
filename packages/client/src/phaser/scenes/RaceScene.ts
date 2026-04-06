@@ -532,27 +532,15 @@ export class RaceScene extends Phaser.Scene {
     if (!this.isPlaying || this.raceFinished || this.isPaused) return;
 
     // Use wall clock time to determine which frame we should be on.
-    // This way, even if the browser throttles our updates while backgrounded,
-    // we catch up instantly when the tab regains focus.
+    // Jump directly to the target frame — no intermediate processing needed
+    // since applyFrame sets all positions absolutely.
     const msPerTick = 1000 / 60;
     const elapsedMs = (Date.now() - this.raceStartWallTime - this.pausedTimeAccum) * this.playbackSpeed;
-    const targetFrame = Math.floor(elapsedMs / msPerTick);
+    const targetFrame = Math.min(Math.floor(elapsedMs / msPerTick), this.frames.length);
 
-    // Advance frames, but cap at 10 per update call for rendering performance
-    const maxPerUpdate = 10;
-    let processed = 0;
-    while (this.currentFrame < targetFrame && this.currentFrame < this.frames.length && processed < maxPerUpdate) {
-      this.currentFrame++;
-      processed++;
-    }
-    // Always render the current frame
-    if (this.currentFrame > 0 && this.currentFrame <= this.frames.length) {
-      this.applyFrame(this.frames[Math.min(this.currentFrame - 1, this.frames.length - 1)]);
-    }
-    // If we're behind, skip ahead (don't render intermediate frames)
-    if (this.currentFrame < targetFrame && this.currentFrame < this.frames.length) {
-      this.currentFrame = Math.min(targetFrame, this.frames.length);
-      this.applyFrame(this.frames[Math.min(this.currentFrame - 1, this.frames.length - 1)]);
+    if (targetFrame > this.currentFrame && targetFrame <= this.frames.length) {
+      this.currentFrame = targetFrame;
+      this.applyFrame(this.frames[this.currentFrame - 1]);
     }
 
     if (this.currentFrame >= this.frames.length && !this.raceFinished) {
