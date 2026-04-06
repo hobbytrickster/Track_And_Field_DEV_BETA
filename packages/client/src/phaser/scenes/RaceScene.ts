@@ -531,29 +531,30 @@ export class RaceScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (!this.isPlaying || this.raceFinished || this.isPaused) return;
 
-    // Use real delta but detect background tab returns via large gaps
+    // Always use real wall clock delta (not Phaser's delta which gets throttled)
     const now = Date.now();
     if (this.lastUpdateTime === 0) this.lastUpdateTime = now;
     const realDelta = now - this.lastUpdateTime;
     this.lastUpdateTime = now;
 
-    // If we were backgrounded (realDelta > 200ms), fast-forward to catch up
-    if (realDelta > 200) {
-      // Skip ahead by the missed time
-      const missedFrames = Math.floor((realDelta * this.playbackSpeed) / (1000 / 60));
-      this.currentFrame = Math.min(this.currentFrame + missedFrames, this.frames.length);
-      if (this.currentFrame > 0 && this.currentFrame <= this.frames.length) {
+    // Advance frames based on real elapsed time
+    this.frameAccum += realDelta * this.playbackSpeed;
+    const msPerTick = 1000 / 60;
+
+    // Process up to 2 frames visually per update for smoothness
+    let rendered = 0;
+    while (this.frameAccum >= msPerTick && this.currentFrame < this.frames.length) {
+      this.frameAccum -= msPerTick;
+      this.currentFrame++;
+      rendered++;
+      // Only render every Nth frame to keep it smooth when catching up
+      if (rendered <= 2 || this.frameAccum < msPerTick) {
         this.applyFrame(this.frames[this.currentFrame - 1]);
       }
-    } else {
-      // Normal smooth playback using delta
-      this.frameAccum += delta * this.playbackSpeed;
-      const msPerTick = 1000 / 60;
-      while (this.frameAccum >= msPerTick && this.currentFrame < this.frames.length) {
-        this.frameAccum -= msPerTick;
-        this.applyFrame(this.frames[this.currentFrame]);
-        this.currentFrame++;
-      }
+    }
+    // If we skipped rendering, make sure we show the final position
+    if (rendered > 2 && this.currentFrame > 0) {
+      this.applyFrame(this.frames[this.currentFrame - 1]);
     }
 
     if (this.currentFrame >= this.frames.length && !this.raceFinished) {
