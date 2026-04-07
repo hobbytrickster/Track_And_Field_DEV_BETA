@@ -11,22 +11,34 @@ export function registerCollectionRoutes(app: FastifyInstance) {
     const db = getDb();
     return db.userAthletes
       .filter(a => a.userId === userId)
-      .map(a => ({
-        id: a.id,
-        userId: a.userId,
-        cardId: a.cardId,
-        template: ATHLETE_TEMPLATES.find(t => t.id === a.cardId),
-        level: a.level,
-        xp: a.xp,
-        bonusStats: {
-          speed: a.speedBonus,
-          stamina: a.staminaBonus,
-          acceleration: a.accelerationBonus,
-          form: a.formBonus,
-        },
-        appearance: a.appearance || null,
-        raceStats: a.raceStats || null,
-      }));
+      .map(a => {
+        const baseTemplate = ATHLETE_TEMPLATES.find(t => t.id === a.cardId);
+        // Apply per-card overrides from pack opening (randomized stats, name, split type)
+        const template = baseTemplate ? {
+          ...baseTemplate,
+          ...(a.overrideStats ? { stats: a.overrideStats } : {}),
+          ...(a.overrideOverall != null ? { overallRating: a.overrideOverall } : {}),
+          ...(a.overrideSplitType !== undefined ? { splitType: a.overrideSplitType } : {}),
+          ...(a.overrideName ? { name: a.overrideName } : {}),
+          ...(a.overrideNationality ? { nationality: a.overrideNationality } : {}),
+        } : undefined;
+        return {
+          id: a.id,
+          userId: a.userId,
+          cardId: a.cardId,
+          template,
+          level: a.level,
+          xp: a.xp,
+          bonusStats: {
+            speed: a.speedBonus,
+            stamina: a.staminaBonus,
+            acceleration: a.accelerationBonus,
+            form: a.formBonus,
+          },
+          appearance: a.appearance || null,
+          raceStats: a.raceStats || null,
+        };
+      });
   });
 
   app.get('/api/collection/boosts', async (request, reply) => {

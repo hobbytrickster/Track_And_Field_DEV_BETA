@@ -75,8 +75,16 @@ export function runRace(request: RaceRequest): {
   const athleteRow = db.userAthletes.find(a => a.id === userAthleteId && a.userId === userId);
   if (!athleteRow) throw new Error('Athlete not found');
 
-  const template = ATHLETE_TEMPLATES.find(t => t.id === athleteRow.cardId);
-  if (!template) throw new Error('Athlete template not found');
+  const baseTemplate = ATHLETE_TEMPLATES.find(t => t.id === athleteRow.cardId);
+  if (!baseTemplate) throw new Error('Athlete template not found');
+
+  // Apply per-card overrides from pack opening
+  const template = {
+    ...baseTemplate,
+    ...(athleteRow.overrideStats ? { stats: athleteRow.overrideStats } : {}),
+    ...(athleteRow.overrideOverall != null ? { overallRating: athleteRow.overrideOverall } : {}),
+    ...(athleteRow.overrideSplitType !== undefined ? { splitType: athleteRow.overrideSplitType as SplitType } : {}),
+  };
 
   const user = db.users.find(u => u.id === userId);
   if (!user) throw new Error('User not found');
@@ -233,8 +241,14 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
   for (const entry of entries) {
     const athleteRow = db.userAthletes.find(a => a.id === entry.userAthleteId);
     if (!athleteRow) continue;
-    const template = ATHLETE_TEMPLATES.find(t => t.id === athleteRow.cardId);
-    if (!template) continue;
+    const baseTemplate = ATHLETE_TEMPLATES.find(t => t.id === athleteRow.cardId);
+    if (!baseTemplate) continue;
+    const template = {
+      ...baseTemplate,
+      ...(athleteRow.overrideStats ? { stats: athleteRow.overrideStats } : {}),
+      ...(athleteRow.overrideOverall != null ? { overallRating: athleteRow.overrideOverall } : {}),
+      ...(athleteRow.overrideSplitType !== undefined ? { splitType: athleteRow.overrideSplitType as SplitType } : {}),
+    };
     const user = db.users.find(u => u.id === entry.userId);
     if (!user) continue;
 

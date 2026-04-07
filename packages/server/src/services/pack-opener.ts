@@ -119,6 +119,11 @@ export function openPack(userId: string, packType: PackType): PackContents {
       speedBonus: 0, staminaBonus: 0, accelerationBonus: 0, formBonus: 0,
       acquiredAt: new Date().toISOString(),
       appearance: randAppearance,
+      overrideStats: { speed, stamina, acceleration, form },
+      overrideOverall: overallRating,
+      overrideSplitType: splitType,
+      overrideName: fullName,
+      overrideNationality: nationality,
     });
   }
 

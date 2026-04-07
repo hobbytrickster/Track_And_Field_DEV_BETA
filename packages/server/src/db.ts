@@ -113,6 +113,12 @@ export interface DbUserAthlete {
   formBonus: number;
   acquiredAt: string;
   appearance?: DbAppearance;
+  // Per-card overrides (randomized at pack open time)
+  overrideStats?: { speed: number; stamina: number; acceleration: number; form: number };
+  overrideOverall?: number;
+  overrideSplitType?: string;
+  overrideName?: string;
+  overrideNationality?: string;
   raceStats?: {
     totalRaces: number;
     wins: number;
