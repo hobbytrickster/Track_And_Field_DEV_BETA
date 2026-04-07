@@ -102,6 +102,11 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
         50% { background-position: 0% 50%; }
         100% { background-position: 100% 50%; }
       }
+      @keyframes superTextGlow {
+        0% { text-shadow: 0 0 8px #aa44ff, 0 0 16px #6600aa; }
+        50% { text-shadow: 0 0 16px #cc66ff, 0 0 30px #aa44ff, 0 0 40px #ff88ff; }
+        100% { text-shadow: 0 0 8px #aa44ff, 0 0 16px #6600aa; }
+      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -178,11 +183,8 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
             <h3 style={{
               color: pack.color, fontSize: 22, margin: '0 0 6px',
               ...(isSuper ? {
-                background: 'linear-gradient(90deg, #aa44ff 0%, #cc66ff 25%, #ff99ff 50%, #cc66ff 75%, #aa44ff 100%)',
-                backgroundSize: '300% 100%',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                animation: 'superShimmer 3s ease-in-out infinite',
+                textShadow: '0 0 10px #aa44ff, 0 0 20px #cc66ff',
+                animation: 'superTextGlow 2s ease-in-out infinite',
               } : {}),
             }}>{pack.name}</h3>
             <p style={{ color: '#888', fontSize: 14, marginBottom: 10, lineHeight: 1.4 }}>{pack.description}</p>
