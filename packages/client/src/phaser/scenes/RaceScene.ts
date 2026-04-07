@@ -99,21 +99,15 @@ export class RaceScene extends Phaser.Scene {
     super({ key: 'RaceScene', active: false, visible: false });
   }
 
-  init(data: {
-    frames: RaceFrame[];
-    results: RaceResult[];
-    eventType: EventType;
-    playerLane: number;
-    records?: { finishTimeMs: number; displayName: string }[];
-    myBestTimes?: { time: number; name: string }[];
-    friendsBestTimes?: { time: number; name: string; isYou?: boolean }[];
-    playerAppearance?: any;
-    stadiumConfig?: any;
-    laneLabels?: Record<number, string>;
-    laneMetadata?: Record<number, any>;
-    canvasWidth?: number;
-    canvasHeight?: number;
-  }) {
+  private _hasData = false;
+
+  init(data: any) {
+    if (!data || !data.frames) {
+      // Scene was auto-started by Phaser without data — skip
+      this._hasData = false;
+      return;
+    }
+    this._hasData = true;
     this.frames = data.frames;
     this.results = data.results;
     this.eventType = data.eventType;
@@ -139,6 +133,7 @@ export class RaceScene extends Phaser.Scene {
   }
 
   create() {
+    if (!this._hasData) return; // Wait for scene.start() with real data
     const { W, H, cfg } = this;
     this.cameras.main.setBackgroundColor('#87ceeb');
 
