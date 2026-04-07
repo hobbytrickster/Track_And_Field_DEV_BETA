@@ -98,8 +98,9 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
     style.id = 'shop-shimmer';
     style.textContent = `
       @keyframes superShimmer {
-        0% { background-position: 200% 50%; }
-        100% { background-position: -200% 50%; }
+        0% { background-position: 100% 50%; }
+        50% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
       }
     `;
     document.head.appendChild(style);
@@ -162,10 +163,10 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
             <div style={{
               width: 100, height: 130, margin: '0 auto 14px',
               background: isSuper
-                ? 'linear-gradient(135deg, #6600aa, #aa44ff, #dd88ff, #aa44ff, #6600aa)'
+                ? 'linear-gradient(90deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
                 : `linear-gradient(135deg, ${pack.color}44, ${pack.color}22)`,
-              backgroundSize: isSuper ? '400% 100%' : undefined,
-              animation: isSuper ? 'superShimmer 3s linear infinite' : undefined,
+              backgroundSize: isSuper ? '300% 100%' : undefined,
+              animation: isSuper ? 'superShimmer 4s ease-in-out infinite' : undefined,
               borderRadius: 12, border: `3px solid ${isSuper ? '#cc66ff' : pack.color}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 42,
@@ -177,11 +178,11 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
             <h3 style={{
               color: pack.color, fontSize: 22, margin: '0 0 6px',
               ...(isSuper ? {
-                background: 'linear-gradient(90deg, #aa44ff, #ff88ff, #aa44ff)',
-                backgroundSize: '200% 100%',
+                background: 'linear-gradient(90deg, #aa44ff 0%, #cc66ff 25%, #ff99ff 50%, #cc66ff 75%, #aa44ff 100%)',
+                backgroundSize: '300% 100%',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                animation: 'superShimmer 2s linear infinite',
+                animation: 'superShimmer 3s ease-in-out infinite',
               } : {}),
             }}>{pack.name}</h3>
             <p style={{ color: '#888', fontSize: 14, marginBottom: 10, lineHeight: 1.4 }}>{pack.description}</p>
