@@ -1,5 +1,8 @@
-// In dev, Vite proxies /api to localhost:3001. In production, use the server URL.
-const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
+// In dev, Vite proxies /api to localhost:3001. In production, hit port 3001 on the same host.
+const API_BASE = (import.meta as any).env?.VITE_API_URL
+  || (typeof window !== 'undefined' && window.location.port === '8080'
+    ? `${window.location.protocol}//${window.location.hostname}:3001/api`
+    : '/api');
 
 let authToken: string | null = localStorage.getItem('trackstars_token');
 
