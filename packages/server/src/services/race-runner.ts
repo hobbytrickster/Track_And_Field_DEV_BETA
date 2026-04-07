@@ -66,6 +66,7 @@ function generateBotRunner(lane: number, targetRating: number, eventType: EventT
 export function runRace(request: RaceRequest): {
   simulation: RaceSimulationResult;
   raceId: string;
+  playerLane: number;
   rewards: { coinsEarned: number; xpEarned: number };
 } {
   const db = getDb();
@@ -186,6 +187,20 @@ export function runRace(request: RaceRequest): {
   user.coins += coinsEarned;
   user.xp += xpEarned;
   if (pos === 1) user.wins++; else user.losses++;
+
+  // Update per-athlete race stats
+  const athleteRow2 = db.userAthletes.find(a => a.id === userAthleteId);
+  if (athleteRow2 && playerResult) {
+    if (!athleteRow2.raceStats) athleteRow2.raceStats = { totalRaces: 0, wins: 0, podiums: 0, lastPlaces: 0, bestTimes: {} };
+    athleteRow2.raceStats.totalRaces++;
+    if (pos === 1) athleteRow2.raceStats.wins++;
+    if (pos === 2 || pos === 3) athleteRow2.raceStats.podiums++;
+    if (pos === 8) athleteRow2.raceStats.lastPlaces++;
+    const prevBest = athleteRow2.raceStats.bestTimes[eventType];
+    if (!prevBest || playerResult.finishTimeMs < prevBest) {
+      athleteRow2.raceStats.bestTimes[eventType] = playerResult.finishTimeMs;
+    }
+  }
 
   if (user.xp >= user.level * ECONOMY.xpPerLevel) {
     user.level++;
@@ -341,6 +356,19 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
     user.coins += coinsEarned;
     user.xp += xpEarned;
     if (pos === 1) user.wins++; else user.losses++;
+
+    // Update per-athlete race stats
+    const ath = db.userAthletes.find(a => a.id === entry.userAthleteId);
+    if (ath) {
+      if (!ath.raceStats) ath.raceStats = { totalRaces: 0, wins: 0, podiums: 0, lastPlaces: 0, bestTimes: {} };
+      ath.raceStats.totalRaces++;
+      if (pos === 1) ath.raceStats.wins++;
+      if (pos === 2 || pos === 3) ath.raceStats.podiums++;
+      if (pos === 8) ath.raceStats.lastPlaces++;
+      const prev = ath.raceStats.bestTimes[eventType];
+      if (!prev || result.finishTimeMs < prev) ath.raceStats.bestTimes[eventType] = result.finishTimeMs;
+    }
+
     if (user.xp >= user.level * ECONOMY.xpPerLevel) {
       user.level++;
       user.xp = 0;

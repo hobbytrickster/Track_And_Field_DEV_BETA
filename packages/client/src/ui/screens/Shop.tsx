@@ -72,10 +72,14 @@ const PACKS = [
   },
   {
     type: 'super' as const, name: 'Super Pack', cost: 15000,
-    athletes: 1, boosts: 5, color: '#aa44ff',
-    description: 'GUARANTEED Super Star athlete! The absolute best in the game.',
+    athletes: 1, boosts: 5, color: '#ff8800',
+    description: 'The ultimate pack! Chance at LEGEND and Super Star athletes.',
     athleteOdds: [
-      { rarity: 'SUPER STAR', pct: '100%', color: '#aa44ff' },
+      { rarity: 'LEGEND', pct: '10%', color: '#ff8800' },
+      { rarity: 'SUPER STAR', pct: '69%', color: '#aa44ff' },
+      { rarity: 'Diamond', pct: '10%', color: '#B9F2FF' },
+      { rarity: 'Gold', pct: '0.5%', color: '#FFD700' },
+      { rarity: 'Bronze', pct: '0.5%', color: '#CD7F32' },
     ],
     boostOdds: [
       { rarity: 'Gold', pct: '20%', color: '#FFD700' },

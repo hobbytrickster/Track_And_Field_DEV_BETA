@@ -43,7 +43,7 @@ export function Collection({ onBack, onCustomize }: Props) {
     setSelectedIds(next);
   };
 
-  const sellValues: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500, superstar: 2000 };
+  const sellValues: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500, superstar: 2000, legend: 5000 };
 
   const getSelectionValue = () => {
     let total = 0;
@@ -221,6 +221,44 @@ export function Collection({ onBack, onCustomize }: Props) {
               <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#888' }}>
                 {(selected as any).appearance ? 'Custom look applied' : 'Default look'}
               </div>
+
+              {/* Race Stats */}
+              {(() => {
+                const rs = (selected as any).raceStats;
+                if (!rs || rs.totalRaces === 0) return (
+                  <div style={{ marginTop: 10, padding: 8, background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: 12, color: '#666', textAlign: 'center' }}>
+                    No race history yet
+                  </div>
+                );
+                return (
+                  <div style={{ marginTop: 10, padding: 10, background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: 12 }}>
+                    <div style={{ color: '#FFD700', fontWeight: 'bold', marginBottom: 6, fontSize: 13 }}>RACE STATS</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                      <span>Races</span><span style={{ fontWeight: 'bold' }}>{rs.totalRaces}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#44ff44' }}>
+                      <span>Wins (1st)</span><span style={{ fontWeight: 'bold' }}>{rs.wins}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#C0C0C0' }}>
+                      <span>Podiums (2nd/3rd)</span><span style={{ fontWeight: 'bold' }}>{rs.podiums}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff6666' }}>
+                      <span>Last Place</span><span style={{ fontWeight: 'bold' }}>{rs.lastPlaces}</span>
+                    </div>
+                    {rs.bestTimes && Object.keys(rs.bestTimes).length > 0 && (
+                      <>
+                        <div style={{ color: '#FFD700', fontWeight: 'bold', marginTop: 6, marginBottom: 4, fontSize: 12 }}>BEST TIMES</div>
+                        {Object.entries(rs.bestTimes).map(([evt, ms]: [string, any]) => {
+                          const t2 = ms >= 60000 ? `${Math.floor(ms/60000)}:${((ms%60000)/1000).toFixed(3).padStart(6,'0')}` : `${(ms/1000).toFixed(3)}s`;
+                          return <div key={evt} style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                            <span>{evt}</span><span style={{ fontWeight: 'bold', color: '#FFD700' }}>{t2}</span>
+                          </div>;
+                        })}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
               <button onClick={async (e) => {
                 e.stopPropagation();
                 if (athletes.length <= 1) { alert('You must keep at least 1 athlete!'); return; }

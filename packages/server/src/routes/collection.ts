@@ -25,6 +25,7 @@ export function registerCollectionRoutes(app: FastifyInstance) {
           form: a.formBonus,
         },
         appearance: a.appearance || null,
+        raceStats: a.raceStats || null,
       }));
   });
 
@@ -59,7 +60,7 @@ export function registerCollectionRoutes(app: FastifyInstance) {
     if (athlete.cardId !== sacrifice.cardId) return reply.status(400).send({ error: 'Can only use duplicate cards' });
 
     const template = ATHLETE_TEMPLATES.find(t => t.id === athlete.cardId);
-    const maxLevel = template ? ({ bronze: 5, silver: 10, gold: 15, platinum: 20, diamond: 25 }[template.rarity] || 10) : 10;
+    const maxLevel = template ? ({ bronze: 5, silver: 10, gold: 15, platinum: 20, diamond: 25, superstar: 30, legend: 50 } as Record<string, number>)[template.rarity] || 10 : 10;
     if (athlete.level >= maxLevel) return reply.status(400).send({ error: 'Already at max level' });
 
     // Random stat bonus

@@ -39,6 +39,7 @@ const RARITY_COLORS: Record<string, string> = {
   platinum: '#E5E4E2',
   diamond: '#B9F2FF',
   superstar: '#aa44ff',
+  legend: '#ff8800',
 };
 
 const RARITY_BG: Record<string, string> = {
@@ -48,6 +49,7 @@ const RARITY_BG: Record<string, string> = {
   platinum: 'linear-gradient(135deg, #666680, #E5E4E2)',
   diamond: 'linear-gradient(135deg, #0088aa, #B9F2FF)',
   superstar: 'linear-gradient(135deg, #6600aa, #aa44ff, #cc66ff, #aa44ff)',
+  legend: 'linear-gradient(135deg, #cc4400, #ff8800, #ffcc44, #ff8800)',
 };
 
 export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
@@ -56,21 +58,25 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
 
   const displayName = (athlete as any).appearance?.customName || t.name;
   const isSS = t.rarity === 'superstar';
+  const isLegend = t.rarity === 'legend';
+  const isShimmer = isSS || isLegend;
 
   if (compact) {
     return (
       <div onClick={onClick} style={{
-        background: isSS
+        background: isLegend
+          ? 'linear-gradient(135deg, #cc4400 0%, #ee6600 20%, #ffaa33 40%, #ffdd66 50%, #ffaa33 60%, #ee6600 80%, #cc4400 100%)'
+          : isSS
           ? 'linear-gradient(135deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
           : RARITY_BG[t.rarity],
-        backgroundSize: isSS ? '300% 100%' : undefined,
-        animation: isSS ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
-        border: selected ? '3px solid #FFD700' : isSS ? '2px solid #cc66ff' : '2px solid #333',
+        backgroundSize: isShimmer ? '300% 100%' : undefined,
+        animation: isShimmer ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
+        border: selected ? '3px solid #FFD700' : isLegend ? '2px solid #ffaa33' : isSS ? '2px solid #cc66ff' : '2px solid #333',
         borderRadius: 12, padding: '12px', cursor: onClick ? 'pointer' : 'default',
         width: 180, height: 200, textAlign: 'center', transition: 'transform 0.15s',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         transform: selected ? 'scale(1.05)' : 'scale(1)',
-        boxShadow: isSS ? '0 0 12px rgba(170,68,255,0.4)' : undefined,
+        boxShadow: isLegend ? '0 0 12px rgba(255,136,0,0.5)' : isSS ? '0 0 12px rgba(170,68,255,0.4)' : undefined,
       }}>
         <div style={{ fontSize: 15, color: '#fff', fontWeight: 'bold' }}>{displayName}</div>
         <MiniRunner appearance={(athlete as any).appearance} jerseyFallback={RARITY_COLORS[t.rarity] || '#ff4444'} />
@@ -91,16 +97,18 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
 
   return (
     <div onClick={onClick} style={{
-      background: isSS
+      background: isLegend
+        ? 'linear-gradient(135deg, #cc4400 0%, #ee6600 20%, #ffaa33 40%, #ffdd66 50%, #ffaa33 60%, #ee6600 80%, #cc4400 100%)'
+        : isSS
         ? 'linear-gradient(135deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
         : RARITY_BG[t.rarity],
-      backgroundSize: isSS ? '300% 100%' : undefined,
-      animation: isSS ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
-      border: selected ? '3px solid #FFD700' : isSS ? '2px solid #cc66ff' : '2px solid #444',
+      backgroundSize: isShimmer ? '300% 100%' : undefined,
+      animation: isShimmer ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
+      border: selected ? '3px solid #FFD700' : isLegend ? '2px solid #ffaa33' : isSS ? '2px solid #cc66ff' : '2px solid #444',
       borderRadius: 14, padding: '16px', cursor: onClick ? 'pointer' : 'default',
       width: 240, transition: 'transform 0.15s',
       transform: selected ? 'scale(1.05)' : 'scale(1)',
-      boxShadow: isSS ? '0 0 15px rgba(170,68,255,0.5)' : selected ? '0 0 20px rgba(255,215,0,0.5)' : '0 4px 12px rgba(0,0,0,0.3)',
+      boxShadow: isLegend ? '0 0 15px rgba(255,136,0,0.6)' : isSS ? '0 0 15px rgba(170,68,255,0.5)' : selected ? '0 0 20px rgba(255,215,0,0.5)' : '0 4px 12px rgba(0,0,0,0.3)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>{t.rarity}</span>

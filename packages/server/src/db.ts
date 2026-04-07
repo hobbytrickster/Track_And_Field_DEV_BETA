@@ -113,6 +113,13 @@ export interface DbUserAthlete {
   formBonus: number;
   acquiredAt: string;
   appearance?: DbAppearance;
+  raceStats?: {
+    totalRaces: number;
+    wins: number;
+    podiums: number;    // 2nd or 3rd
+    lastPlaces: number; // 8th place
+    bestTimes: Record<string, number>; // event → best time ms
+  };
 }
 
 export interface DbUserBoost {

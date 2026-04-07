@@ -71,7 +71,7 @@ export function openPack(userId: string, packType: PackType): PackContents {
     let splitType = template.splitType;
     if (event === '800m') {
       const roll = Math.random();
-      if (rarity === 'superstar') {
+      if (rarity === 'legend' || rarity === 'superstar') {
         splitType = roll < 0.50 ? 'extreme_positive' : 'extreme_negative';
       } else if (rarity === 'diamond') {
         if (roll < 0.15) splitType = 'extreme_positive';

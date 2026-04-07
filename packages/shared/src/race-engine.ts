@@ -472,10 +472,11 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
         maxSpeed = 10.2;
       }
 
-      // Graduated tier multiplier — Super Stars at 1.0, others nerfed
+      // Graduated tier multiplier — Legends/Super Stars at 1.0, others nerfed
       const ovr = ri.overallRating;
       let tierMult: number;
-      if (ovr >= 96)      tierMult = 1.00;  // Super Star — full speed
+      if (ovr >= 100)     tierMult = 1.01;  // Legend — slight edge
+      else if (ovr >= 96) tierMult = 1.00;  // Super Star — full speed
       else if (ovr >= 79) tierMult = 0.94;  // Diamond — -6%
       else if (ovr >= 66) tierMult = 0.95;  // Platinum — -5%
       else if (ovr >= 51) tierMult = 0.97;  // Gold — -3%
