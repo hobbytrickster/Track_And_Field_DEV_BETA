@@ -218,10 +218,15 @@ function generateAthleteTemplates(): AthleteCardTemplate[] {
   let id = 1;
   // Generate cards for each rarity and event
   for (const rarity of rarities) {
-    const count = rarity === 'legend' ? 2 : rarity === 'superstar' ? 3 : rarity === 'diamond' ? 3 : rarity === 'platinum' ? 5 : rarity === 'gold' ? 8 : rarity === 'silver' ? 10 : 12;
+    const count = rarity === 'legend' ? 3 : rarity === 'superstar' ? 3 : rarity === 'diamond' ? 3 : rarity === 'platinum' ? 5 : rarity === 'gold' ? 8 : rarity === 'silver' ? 10 : 12;
     for (let i = 0; i < count; i++) {
-      // Guarantee at least one diamond is an 800m specialist
-      const event = (rarity === 'diamond' && i === 0) ? '800m' : events[Math.floor(rand() * events.length)];
+      // Guarantee one of each event for top tiers
+      let event: EventType;
+      if ((rarity === 'legend' || rarity === 'superstar' || rarity === 'diamond') && i < 3) {
+        event = events[i]; // i=0 → 200m, i=1 → 400m, i=2 → 800m
+      } else {
+        event = events[Math.floor(rand() * events.length)];
+      }
       const range = RARITY_STAT_RANGES[rarity];
       const stat = () => Math.floor(range.min + rand() * (range.max - range.min));
 
