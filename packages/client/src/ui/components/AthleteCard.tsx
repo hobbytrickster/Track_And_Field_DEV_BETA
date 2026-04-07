@@ -48,7 +48,8 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
         background: RARITY_BG[t.rarity],
         border: selected ? '3px solid #FFD700' : '2px solid #333',
         borderRadius: 12, padding: '12px', cursor: onClick ? 'pointer' : 'default',
-        width: 180, textAlign: 'center', transition: 'transform 0.15s',
+        width: 180, height: 200, textAlign: 'center', transition: 'transform 0.15s',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
         transform: selected ? 'scale(1.05)' : 'scale(1)',
       }}>
         <div style={{ fontSize: 15, color: '#fff', fontWeight: 'bold' }}>{displayName}</div>
