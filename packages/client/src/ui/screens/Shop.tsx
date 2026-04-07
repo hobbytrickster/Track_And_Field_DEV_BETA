@@ -91,6 +91,20 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
   const [error, setError] = useState('');
   const [expandedOdds, setExpandedOdds] = useState<string | null>(null);
 
+  // Inject shimmer animation for super pack
+  React.useEffect(() => {
+    if (document.getElementById('shop-shimmer')) return;
+    const style = document.createElement('style');
+    style.id = 'shop-shimmer';
+    style.textContent = `
+      @keyframes superShimmer {
+        0% { background-position: 200% 50%; }
+        100% { background-position: -200% 50%; }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const buyPack = async (packType: string) => {
     const pack = PACKS.find(p => p.type === packType);
     if (!pack) return;
@@ -135,23 +149,41 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
 
       {/* Pack display */}
       <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-        {PACKS.map(pack => (
-          <div key={pack.type} style={{
-            background: `linear-gradient(180deg, ${pack.color}18, ${pack.color}08)`,
-            border: `2px solid ${pack.color}55`,
+        {PACKS.map(pack => {
+          const isSuper = pack.type === 'super';
+          return <div key={pack.type} style={{
+            background: isSuper
+              ? 'linear-gradient(135deg, #1a0033, #330066, #1a0033)'
+              : `linear-gradient(180deg, ${pack.color}18, ${pack.color}08)`,
+            border: isSuper ? '2px solid #aa44ff' : `2px solid ${pack.color}55`,
             borderRadius: 16, padding: 24, width: 260, textAlign: 'center',
+            boxShadow: isSuper ? '0 0 20px rgba(170,68,255,0.3)' : 'none',
           }}>
             <div style={{
               width: 100, height: 130, margin: '0 auto 14px',
-              background: `linear-gradient(135deg, ${pack.color}44, ${pack.color}22)`,
-              borderRadius: 12, border: `3px solid ${pack.color}`,
+              background: isSuper
+                ? 'linear-gradient(135deg, #6600aa, #aa44ff, #dd88ff, #aa44ff, #6600aa)'
+                : `linear-gradient(135deg, ${pack.color}44, ${pack.color}22)`,
+              backgroundSize: isSuper ? '400% 100%' : undefined,
+              animation: isSuper ? 'superShimmer 3s linear infinite' : undefined,
+              borderRadius: 12, border: `3px solid ${isSuper ? '#cc66ff' : pack.color}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 42,
+              boxShadow: isSuper ? '0 0 15px rgba(170,68,255,0.5)' : 'none',
             }}>
-              {pack.type === 'super' ? '🔥' : pack.type === 'boost' ? '⚡' : pack.type === 'bronze' ? '🥉' : pack.type === 'silver' ? '🥈' : '🥇'}
+              {isSuper ? '🔥' : pack.type === 'boost' ? '⚡' : pack.type === 'bronze' ? '🥉' : pack.type === 'silver' ? '🥈' : '🥇'}
             </div>
 
-            <h3 style={{ color: pack.color, fontSize: 22, margin: '0 0 6px' }}>{pack.name}</h3>
+            <h3 style={{
+              color: pack.color, fontSize: 22, margin: '0 0 6px',
+              ...(isSuper ? {
+                background: 'linear-gradient(90deg, #aa44ff, #ff88ff, #aa44ff)',
+                backgroundSize: '200% 100%',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                animation: 'superShimmer 2s linear infinite',
+              } : {}),
+            }}>{pack.name}</h3>
             <p style={{ color: '#888', fontSize: 14, marginBottom: 10, lineHeight: 1.4 }}>{pack.description}</p>
 
             <div style={{ color: '#aaa', fontSize: 13, marginBottom: 10 }}>
@@ -207,7 +239,7 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
               {opening ? 'Opening...' : `${pack.cost} coins`}
             </button>
           </div>
-        ))}
+        })}
       </div>
 
       {/* Pack opening results */}
