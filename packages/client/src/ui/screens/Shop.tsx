@@ -171,7 +171,7 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
                 ? 'linear-gradient(90deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
                 : `linear-gradient(135deg, ${pack.color}44, ${pack.color}22)`,
               backgroundSize: isSuper ? '300% 100%' : undefined,
-              animation: isSuper ? 'superShimmer 4s ease-in-out infinite' : undefined,
+              animation: isSuper ? 'superShimmer 6s ease-in-out infinite' : undefined,
               borderRadius: 12, border: `3px solid ${isSuper ? '#cc66ff' : pack.color}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 42,
