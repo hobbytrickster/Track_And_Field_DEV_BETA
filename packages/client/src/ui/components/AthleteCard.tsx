@@ -24,6 +24,7 @@ const RARITY_COLORS: Record<string, string> = {
   gold: '#FFD700',
   platinum: '#E5E4E2',
   diamond: '#B9F2FF',
+  superstar: '#aa44ff',
 };
 
 const RARITY_BG: Record<string, string> = {
@@ -32,6 +33,7 @@ const RARITY_BG: Record<string, string> = {
   gold: 'linear-gradient(135deg, #B8860B, #FFD700)',
   platinum: 'linear-gradient(135deg, #666680, #E5E4E2)',
   diamond: 'linear-gradient(135deg, #0088aa, #B9F2FF)',
+  superstar: 'linear-gradient(135deg, #6600aa, #aa44ff, #cc66ff, #aa44ff)',
 };
 
 export function AthleteCard({ athlete, selected, onClick, compact }: Props) {

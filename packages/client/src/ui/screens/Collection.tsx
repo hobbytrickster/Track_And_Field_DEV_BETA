@@ -43,7 +43,7 @@ export function Collection({ onBack, onCustomize }: Props) {
     setSelectedIds(next);
   };
 
-  const sellValues: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500 };
+  const sellValues: Record<string, number> = { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500, superstar: 2000 };
 
   const getSelectionValue = () => {
     let total = 0;

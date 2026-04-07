@@ -48,12 +48,14 @@ export function calculateOverallRating(stats: { speed: number; stamina: number; 
 // ============================================================
 // Stat Ranges by Rarity
 // ============================================================
+// Stat ranges — NO overlap between tiers. Each rarity has exclusive OVR range.
 export const RARITY_STAT_RANGES: Record<Rarity, { min: number; max: number; overallMin: number; overallMax: number }> = {
-  bronze:   { min: 20, max: 45, overallMin: 20, overallMax: 40 },
-  silver:   { min: 35, max: 60, overallMin: 35, overallMax: 55 },
-  gold:     { min: 50, max: 75, overallMin: 50, overallMax: 70 },
-  platinum: { min: 65, max: 90, overallMin: 65, overallMax: 85 },
-  diamond:  { min: 80, max: 99, overallMin: 80, overallMax: 99 },
+  bronze:    { min: 15, max: 40, overallMin: 15, overallMax: 35 },
+  silver:    { min: 36, max: 52, overallMin: 36, overallMax: 50 },
+  gold:      { min: 48, max: 65, overallMin: 51, overallMax: 65 },
+  platinum:  { min: 60, max: 78, overallMin: 66, overallMax: 78 },
+  diamond:   { min: 74, max: 90, overallMin: 79, overallMax: 90 },
+  superstar: { min: 92, max: 99, overallMin: 96, overallMax: 100 },
 };
 
 // ============================================================
@@ -70,7 +72,7 @@ export const ECONOMY = {
   levelUpBonus: 200,
   xpPerLevel: 100,
   // Sell values per rarity when releasing a card
-  sellValues: { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500 } as Record<string, number>,
+  sellValues: { bronze: 25, silver: 50, gold: 100, platinum: 200, diamond: 500, superstar: 2000 } as Record<string, number>,
 };
 
 export const PACK_COSTS: Record<PackType, number> = {
@@ -78,6 +80,7 @@ export const PACK_COSTS: Record<PackType, number> = {
   silver: 400,
   gold: 1000,
   boost: 300,
+  super: 15000,
 };
 
 export const PACK_CONTENTS: Record<PackType, { athletes: number; boosts: number }> = {
@@ -85,6 +88,7 @@ export const PACK_CONTENTS: Record<PackType, { athletes: number; boosts: number 
   silver: { athletes: 3, boosts: 3 },
   gold:   { athletes: 1, boosts: 3 },
   boost:  { athletes: 0, boosts: 5 },
+  super:  { athletes: 1, boosts: 5 },
 };
 
 // Drop rates: probability of each rarity per athlete in a pack
@@ -95,6 +99,7 @@ export const PACK_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
     gold: 0.05,
     platinum: 0,
     diamond: 0,
+    superstar: 0,
   },
   silver: {
     bronze: 0,
@@ -102,13 +107,15 @@ export const PACK_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
     gold: 0.40,
     platinum: 0.18,
     diamond: 0.02,
+    superstar: 0,
   },
   gold: {
     bronze: 0,
     silver: 0,
-    gold: 0.30,
+    gold: 0.296,
     platinum: 0.45,
     diamond: 0.25,
+    superstar: 0.004,
   },
   boost: {
     bronze: 0,
@@ -116,6 +123,15 @@ export const PACK_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
     gold: 0,
     platinum: 0,
     diamond: 0,
+    superstar: 0,
+  },
+  super: {
+    bronze: 0,
+    silver: 0,
+    gold: 0,
+    platinum: 0,
+    diamond: 0,
+    superstar: 1.0,
   },
 };
 
@@ -194,14 +210,14 @@ function seededRandom(seed: number): () => number {
 function generateAthleteTemplates(): AthleteCardTemplate[] {
   const templates: AthleteCardTemplate[] = [];
   const rand = seededRandom(42);
-  const rarities: Rarity[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+  const rarities: Rarity[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'superstar'];
   const events: EventType[] = ['200m', '400m', '800m'];
   const flavorByEvent = { '200m': FLAVOR_TEXTS_200, '400m': FLAVOR_TEXTS_400, '800m': FLAVOR_TEXTS_800 };
 
   let id = 1;
   // Generate cards for each rarity and event
   for (const rarity of rarities) {
-    const count = rarity === 'diamond' ? 3 : rarity === 'platinum' ? 5 : rarity === 'gold' ? 8 : rarity === 'silver' ? 10 : 12;
+    const count = rarity === 'superstar' ? 3 : rarity === 'diamond' ? 3 : rarity === 'platinum' ? 5 : rarity === 'gold' ? 8 : rarity === 'silver' ? 10 : 12;
     for (let i = 0; i < count; i++) {
       // Guarantee at least one diamond is an 800m specialist
       const event = (rarity === 'diamond' && i === 0) ? '800m' : events[Math.floor(rand() * events.length)];
@@ -229,12 +245,15 @@ function generateAthleteTemplates(): AthleteCardTemplate[] {
       } while (usedNames.has(fullName) && nameAttempts < 100);
 
       // Assign split type for 800m specialists
-      // Extreme types are DIAMOND (legendary) only
+      // Extreme types: superstar (always) and diamond (sometimes)
       let splitType: SplitType | undefined;
       if (event === '800m') {
         const splitRoll = rand();
-        if (rarity === 'diamond') {
-          // Legendary: can get any type including extremes
+        if (rarity === 'superstar') {
+          // Super Stars ALWAYS get extreme types
+          if (splitRoll < 0.50) splitType = 'extreme_positive';
+          else splitType = 'extreme_negative';
+        } else if (rarity === 'diamond') {
           if (splitRoll < 0.15) splitType = 'extreme_positive';
           else if (splitRoll < 0.35) splitType = 'positive';
           else if (splitRoll < 0.65) splitType = 'basic';
@@ -344,8 +363,9 @@ export const BOOST_TEMPLATES: BoostCardTemplate[] = [
 
 // Boost drop rates per pack rarity
 export const BOOST_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
-  bronze: { bronze: 0.80, silver: 0.20, gold: 0, platinum: 0, diamond: 0 },
-  silver: { bronze: 0.20, silver: 0.50, gold: 0.25, platinum: 0.05, diamond: 0 },
-  gold:   { bronze: 0, silver: 0.15, gold: 0.45, platinum: 0.30, diamond: 0.10 },
-  boost:  { bronze: 0.15, silver: 0.35, gold: 0.30, platinum: 0.15, diamond: 0.05 },
+  bronze: { bronze: 0.80, silver: 0.20, gold: 0, platinum: 0, diamond: 0, superstar: 0 },
+  silver: { bronze: 0.20, silver: 0.50, gold: 0.25, platinum: 0.05, diamond: 0, superstar: 0 },
+  gold:   { bronze: 0, silver: 0.15, gold: 0.45, platinum: 0.30, diamond: 0.10, superstar: 0 },
+  boost:  { bronze: 0.15, silver: 0.35, gold: 0.30, platinum: 0.15, diamond: 0.05, superstar: 0 },
+  super:  { bronze: 0, silver: 0, gold: 0.20, platinum: 0.40, diamond: 0.40, superstar: 0 },
 };

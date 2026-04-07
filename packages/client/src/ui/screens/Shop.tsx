@@ -45,9 +45,10 @@ const PACKS = [
     athletes: 1, boosts: 3, color: '#FFD700',
     description: 'Premium! One guaranteed gold or better athlete. Top-tier boosts.',
     athleteOdds: [
-      { rarity: 'Gold', pct: '30%', color: '#FFD700' },
+      { rarity: 'Gold', pct: '29.6%', color: '#FFD700' },
       { rarity: 'Platinum', pct: '45%', color: '#E5E4E2' },
       { rarity: 'Diamond', pct: '25%', color: '#B9F2FF' },
+      { rarity: 'SUPER STAR', pct: '0.4%', color: '#aa44ff' },
     ],
     boostOdds: [
       { rarity: 'Silver', pct: '15%', color: '#C0C0C0' },
@@ -67,6 +68,19 @@ const PACKS = [
       { rarity: 'Gold', pct: '30%', color: '#FFD700' },
       { rarity: 'Platinum', pct: '15%', color: '#E5E4E2' },
       { rarity: 'Diamond', pct: '5%', color: '#B9F2FF' },
+    ],
+  },
+  {
+    type: 'super' as const, name: 'Super Pack', cost: 15000,
+    athletes: 1, boosts: 5, color: '#aa44ff',
+    description: 'GUARANTEED Super Star athlete! The absolute best in the game.',
+    athleteOdds: [
+      { rarity: 'SUPER STAR', pct: '100%', color: '#aa44ff' },
+    ],
+    boostOdds: [
+      { rarity: 'Gold', pct: '20%', color: '#FFD700' },
+      { rarity: 'Platinum', pct: '40%', color: '#E5E4E2' },
+      { rarity: 'Diamond', pct: '40%', color: '#B9F2FF' },
     ],
   },
 ];
@@ -134,7 +148,7 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 42,
             }}>
-              {pack.type === 'boost' ? '⚡' : pack.type === 'bronze' ? '🥉' : pack.type === 'silver' ? '🥈' : '🥇'}
+              {pack.type === 'super' ? '🔥' : pack.type === 'boost' ? '⚡' : pack.type === 'bronze' ? '🥉' : pack.type === 'silver' ? '🥈' : '🥇'}
             </div>
 
             <h3 style={{ color: pack.color, fontSize: 22, margin: '0 0 6px' }}>{pack.name}</h3>

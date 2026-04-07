@@ -454,29 +454,30 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
       const runnerPct = state.distance / raceDistance;
 
       // Base top speed (scaled by speed stat)
-      // Speed ranges are set so that even a 99-speed diamond WITHOUT boosts
-      // runs comfortably above the target floor. Boosts can push closer to the
-      // hard cap, but hitting it should be very rare (perfect card + perfect boosts).
-      //
-      // Without boosts, diamond (speed ~90): 200m ~20.5s, 400m ~44s, 800m ~1:42
-      // With max boosts, diamond: 200m ~19.5s, 400m ~43s, 800m ~1:40 (rare)
-      // Speed ranges per event — wide enough for full rarity spectrum
-      // Target times (in-specialty, normal day, no boosts):
-      //   200m: bronze ~25s ... diamond ~20s
-      //   400m: bronze ~62s ... diamond ~44s
-      //   800m: bronze ~2:10 ... diamond ~1:45
+      // Graduated speed by tier — Super Stars are the fastest, lower tiers nerfed slightly
+      // OVR ranges: bronze 15-35, silver 36-50, gold 51-65, platinum 66-78, diamond 79-90, superstar 96-100
       let minSpeed: number, maxSpeed: number;
       if (eventType === '800m') {
-        minSpeed = 5.6;  // bronze speed 30 → ~6.26 → ~2:10
-        maxSpeed = 7.8;  // diamond speed 90 → ~7.58 → ~1:45
+        minSpeed = 5.6;
+        maxSpeed = 7.8;
       } else if (eventType === '400m') {
-        minSpeed = 5.5;  // bronze speed 30 → ~6.46 → ~62s
-        maxSpeed = 9.2;  // diamond speed 90 → ~8.83 → ~44s
+        minSpeed = 5.5;
+        maxSpeed = 9.2;
       } else {
-        minSpeed = 7.2;  // bronze speed 30 → ~8.01 → ~25s
-        maxSpeed = 10.2; // diamond speed 90 → ~9.90 → ~20s
+        minSpeed = 7.2;
+        maxSpeed = 10.2;
       }
-      const topSpeed = minSpeed + (effectiveStats.speed / 100) * (maxSpeed - minSpeed);
+
+      // Graduated tier multiplier — Super Stars at 1.0, others nerfed
+      const ovr = ri.overallRating;
+      let tierMult: number;
+      if (ovr >= 96)      tierMult = 1.00;  // Super Star — full speed
+      else if (ovr >= 79) tierMult = 0.94;  // Diamond — -6%
+      else if (ovr >= 66) tierMult = 0.95;  // Platinum — -5%
+      else if (ovr >= 51) tierMult = 0.97;  // Gold — -3%
+      else                tierMult = 1.00;  // Bronze/Silver — unchanged
+
+      const topSpeed = (minSpeed + (effectiveStats.speed / 100) * (maxSpeed - minSpeed)) * tierMult;
 
       // Apply curves
       const accelFactor = accelerationCurve(runnerPct, effectiveStats.acceleration, eventType);
