@@ -479,28 +479,31 @@ export class RaceScene extends Phaser.Scene {
     turfImg.setMask(maskGfx.createGeometryMask());
   }
 
+  private countdownId: number = 0; // increments each countdown to kill stale ones
+
   private startCountdown() {
-    // Pre-load voices
     if ('speechSynthesis' in window) {
       window.speechSynthesis.getVoices();
+      window.speechSynthesis.cancel(); // kill any leftover speech
     }
 
-    // Use manual timing so speed changes take effect live
+    // Each countdown gets a unique ID — stale loops from replays will self-terminate
+    this.countdownId++;
+    const myId = this.countdownId;
+
     let lastTickTime = Date.now();
     let accumulatedMs = 0;
     let phase = 0;
-    let stopped = false;
-    const sceneRef = this;
 
     const countdownCheck = () => {
-      if (stopped || !sceneRef.scene || !sceneRef.scene.isActive()) return;
+      // Kill if scene restarted (new countdown has a different ID)
+      if (myId !== this.countdownId) return;
       if (this.isPaused) { lastTickTime = Date.now(); requestAnimationFrame(countdownCheck); return; }
 
       const now = Date.now();
       const dt = now - lastTickTime;
       lastTickTime = now;
-      // Accumulate time scaled by current speed, cap at 100ms to prevent jumps
-      accumulatedMs += Math.min(dt, 100) * this.playbackSpeed;
+      accumulatedMs += Math.min(dt, 50) * this.playbackSpeed; // cap at 50ms for smoother timing
       const elapsed = accumulatedMs;
 
       if (phase === 0 && elapsed >= 200) {
@@ -517,7 +520,6 @@ export class RaceScene extends Phaser.Scene {
         setCrowdVolume(0.03, 0.4);
       } else if (phase === 2 && elapsed >= 2800) {
         phase = 3;
-        stopped = true;
         this.playGunshot();
         this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
         this.tweens.add({
