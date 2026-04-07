@@ -357,13 +357,20 @@ export class RaceScene extends Phaser.Scene {
     this.playerBoostName = playerBoostName;
     if (playerBoostName) {
       const emoji = boostEmojis[playerBoostName] || '⭐';
-      const boostBg = this.add.rectangle(20 + 75, H - 70, 150, 50, 0x000000, 0.6)
+      // Measure text width first to size the box
+      const tempLabel = this.add.text(0, 0, playerBoostName, {
+        fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold',
+      });
+      const textWidth = tempLabel.width;
+      tempLabel.destroy();
+      const boxWidth = Math.max(textWidth + 45, 120); // 45 = emoji space + padding
+      const boostBg = this.add.rectangle(20, H - 70, boxWidth, 50, 0x000000, 0.6)
         .setStrokeStyle(1, 0x00ccff, 0.6).setDepth(10).setOrigin(0, 0.5);
       this.boostCardBg = boostBg;
       this.add.text(28, H - 70, emoji, {
         fontSize: '24px',
       }).setOrigin(0, 0.5).setDepth(11);
-      const boostLabel = this.add.text(55, H - 78, playerBoostName, {
+      this.add.text(55, H - 78, playerBoostName, {
         fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold',
         color: '#00ccff', stroke: '#000', strokeThickness: 1,
       }).setDepth(11);
