@@ -67,7 +67,34 @@ export function openPack(userId: string, packType: PackType): PackContents {
     if (event === '800m') { stamina = Math.min(99, stamina + 5); form = Math.min(99, form + 4); }
     const overallRating = Math.round(speed * 0.35 + stamina * 0.25 + acceleration * 0.25 + form * 0.15);
 
-    const namedTemplate = { ...template, name: fullName, nationality, stats: { speed, stamina, acceleration, form }, overallRating };
+    // Re-roll split type for 800m cards (don't reuse template's fixed type)
+    let splitType = template.splitType;
+    if (event === '800m') {
+      const roll = Math.random();
+      if (rarity === 'superstar') {
+        splitType = roll < 0.50 ? 'extreme_positive' : 'extreme_negative';
+      } else if (rarity === 'diamond') {
+        if (roll < 0.15) splitType = 'extreme_positive';
+        else if (roll < 0.35) splitType = 'positive';
+        else if (roll < 0.65) splitType = 'basic';
+        else if (roll < 0.85) splitType = 'negative';
+        else splitType = 'extreme_negative';
+      } else if (rarity === 'platinum') {
+        if (roll < 0.25) splitType = 'positive';
+        else if (roll < 0.65) splitType = 'basic';
+        else splitType = 'negative';
+      } else if (rarity === 'gold') {
+        if (roll < 0.20) splitType = 'positive';
+        else if (roll < 0.75) splitType = 'basic';
+        else splitType = 'negative';
+      } else {
+        if (roll < 0.12) splitType = 'positive';
+        else if (roll < 0.82) splitType = 'basic';
+        else splitType = 'negative';
+      }
+    }
+
+    const namedTemplate = { ...template, name: fullName, nationality, stats: { speed, stamina, acceleration, form }, overallRating, splitType };
     athletes.push(namedTemplate);
 
     // Generate a random appearance for each packed athlete
