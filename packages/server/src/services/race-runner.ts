@@ -304,19 +304,20 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
   challenge.simulationResult = JSON.stringify({ ...simulation, laneMetadata });
   challenge.status = 'simulated';
 
-  // Cleanup: remove old simulated challenges between these players, keep only this one
-  const playerIds = entries.map(e => e.userId).sort();
-  const oldChallenges = db.challenges.filter(c =>
-    c.id !== challengeId && c.status === 'simulated' &&
-    (() => {
-      const cEntries = (db.challengeEntries || []).filter(e => e.challengeId === c.id && e.status === 'submitted');
-      const cPlayerIds = cEntries.map(e => e.userId).sort();
-      return cPlayerIds.length === playerIds.length && cPlayerIds.every((id, i) => id === playerIds[i]);
-    })()
-  );
-  for (const old of oldChallenges) {
-    db.challengeEntries = db.challengeEntries.filter(e => e.challengeId !== old.id);
-    db.challenges = db.challenges.filter(c => c.id !== old.id);
+  // Cleanup: for each participant, delete ALL their old simulated challenges (keep only this one)
+  // This means each player only ever has 1 replay stored at a time
+  const participantIds = entries.map(e => e.userId);
+  const oldChallengeIds = new Set<string>();
+  for (const pid of participantIds) {
+    const playerEntries = (db.challengeEntries || []).filter(e => e.userId === pid && e.challengeId !== challengeId);
+    for (const pe of playerEntries) {
+      const ch = db.challenges.find(c => c.id === pe.challengeId && c.status === 'simulated');
+      if (ch) oldChallengeIds.add(ch.id);
+    }
+  }
+  for (const oldId of oldChallengeIds) {
+    db.challengeEntries = db.challengeEntries.filter(e => e.challengeId !== oldId);
+    db.challenges = db.challenges.filter(c => c.id !== oldId);
   }
   challenge.completedAt = new Date().toISOString();
 
