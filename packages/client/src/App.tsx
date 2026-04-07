@@ -25,7 +25,7 @@ function App() {
   const [customizeAthleteId, setCustomizeAthleteId] = useState<string | null>(null);
   const [raceAppearance, setRaceAppearance] = useState<any>(null);
   const [raceStadiumOverride, setRaceStadiumOverride] = useState<any>(null);
-  const [challengeFriendId, setChallengeFriendId] = useState<string | null>(null);
+  const [challengeFriendIds, setChallengeFriendIds] = useState<string[]>([]);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [challengeEventType, setChallengeEventType] = useState<string | null>(null);
   const [raceData, setRaceData] = useState<{
@@ -149,7 +149,7 @@ function App() {
     case 'friends':
       return <Friends
         onBack={() => setScreen('menu')}
-        onChallenge={(fid) => { setChallengeFriendId(fid); setScreen('challenge-setup'); }}
+        onChallenge={(fids) => { setChallengeFriendIds(fids); setScreen('challenge-setup'); }}
         onAcceptChallenge={(cid, evt) => { setChallengeId(cid); setChallengeEventType(evt); setScreen('challenge-setup'); }}
         onViewResult={async (cid) => {
           try {
@@ -187,23 +187,23 @@ function App() {
                   laneLabels: data.laneLabels, laneMetadata: data.laneMetadata,
                 });
                 setRaceStadiumOverride(data.stadiumConfig || null);
-                setChallengeId(null); setChallengeEventType(null); setChallengeFriendId(null);
+                setChallengeId(null); setChallengeEventType(null); setChallengeFriendIds([]);
                 setScreen('racing');
               } else {
                 alert('Challenge submitted! Waiting for opponent to respond.');
-                setChallengeId(null); setChallengeEventType(null); setChallengeFriendId(null);
+                setChallengeId(null); setChallengeEventType(null); setChallengeFriendIds([]);
                 setScreen('challenges');
               }
-            } else if (challengeFriendId) {
-              // Creating a new challenge
-              await api.createChallenge(challengeFriendId, eventType, athleteId, boostIds);
-              alert('Challenge sent! Your friend will see it next time they log in.');
-              setChallengeFriendId(null);
+            } else if (challengeFriendIds.length > 0) {
+              // Creating a new challenge (single or multi-friend)
+              await api.createChallenge(challengeFriendIds[0], eventType, athleteId, boostIds, challengeFriendIds.length > 1 ? challengeFriendIds : undefined);
+              alert(`Challenge sent to ${challengeFriendIds.length} friend${challengeFriendIds.length > 1 ? 's' : ''}!`);
+              setChallengeFriendIds([]);
               setScreen('friends');
             }
           } catch (err: any) { alert(err.message); }
         }}
-        onBack={() => { setChallengeId(null); setChallengeEventType(null); setChallengeFriendId(null); setScreen(challengeId ? 'challenges' : 'friends'); }}
+        onBack={() => { setChallengeId(null); setChallengeEventType(null); setChallengeFriendIds([]); setScreen(challengeId ? 'challenges' : 'friends'); }}
       />;
 
     case 'stadium':

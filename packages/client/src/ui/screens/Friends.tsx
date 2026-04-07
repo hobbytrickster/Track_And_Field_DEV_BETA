@@ -23,12 +23,13 @@ interface ChallengeItem {
   challengeId: string; eventType: string; status: string;
   opponentName: string; isCreator: boolean;
   myEntry: { status: string; viewedResult: boolean } | null;
+  progress?: string;
   createdAt: string;
 }
 
 interface Props {
   onBack: () => void;
-  onChallenge: (friendId: string) => void;
+  onChallenge: (friendIds: string[]) => void;
   onAcceptChallenge?: (challengeId: string, eventType: string) => void;
   onViewResult?: (challengeId: string) => void;
 }
@@ -45,6 +46,7 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
   const [pending, setPending] = useState<PendingChallenge[]>([]);
   const [allChallenges, setAllChallenges] = useState<ChallengeItem[]>([]);
   const [tab, setTab] = useState<'friends' | 'challenges'>('friends');
+  const [challengeSelect, setChallengeSelect] = useState<Set<string>>(new Set());
 
   const refresh = async () => {
     const [friendsData, codeData, pendingData, allData] = await Promise.all([
@@ -163,7 +165,7 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
                       fontSize: 12, padding: '2px 8px', borderRadius: 4,
                       background: c.status === 'simulated' ? '#224422' : c.status === 'pending' ? '#443300' : '#442222',
                       color: c.status === 'simulated' ? '#44ff44' : c.status === 'pending' ? '#ffaa44' : '#ff6666',
-                    }}>{c.status === 'simulated' ? 'COMPLETE' : c.status === 'pending' ? 'WAITING' : c.status.toUpperCase()}</span>
+                    }}>{c.status === 'simulated' ? 'COMPLETE' : c.status === 'pending' ? `WAITING ${(c as any).progress || ''}` : c.status.toUpperCase()}</span>
                   </div>
                 </div>
                 {c.status === 'simulated' && onViewResult && (
@@ -205,24 +207,46 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
       {/* Friend list + detail */}
       <div style={{ display: 'flex', gap: 20 }}>
         <div style={{ flex: 1 }}>
-          <h3 style={{ color: '#fff', marginBottom: 12, fontSize: 18 }}>Friends ({friends.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ color: '#fff', margin: 0, fontSize: 18 }}>Friends ({friends.length})</h3>
+            {challengeSelect.size > 0 && (
+              <button onClick={() => { onChallenge(Array.from(challengeSelect)); setChallengeSelect(new Set()); }} style={{
+                background: '#cc2244', color: '#fff', border: 'none', borderRadius: 8,
+                padding: '8px 18px', fontSize: 14, fontWeight: 'bold', cursor: 'pointer',
+              }}>CHALLENGE {challengeSelect.size} FRIEND{challengeSelect.size > 1 ? 'S' : ''}</button>
+            )}
+          </div>
           {loading ? <div style={{ color: '#888' }}>Loading...</div> :
             friends.length === 0 ? <div style={{ color: '#888' }}>No friends yet. Share your code!</div> :
             friends.map((f: Friend) => (
               <div key={f.id} onClick={() => loadHistory(f)} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: selectedFriend?.id === f.id ? '#2a1a1a' : '#111', border: selectedFriend?.id === f.id ? '1px solid #cc2244' : '1px solid #222',
+                background: challengeSelect.has(f.id) ? '#1a0a2a' : selectedFriend?.id === f.id ? '#2a1a1a' : '#111',
+                border: challengeSelect.has(f.id) ? '1px solid #aa44ff' : selectedFriend?.id === f.id ? '1px solid #cc2244' : '1px solid #222',
                 borderRadius: 10, padding: '12px 16px', marginBottom: 8, cursor: 'pointer',
               }}>
-                <div>
-                  <div style={{ color: '#fff', fontSize: 17, fontWeight: 'bold' }}>{f.displayName}</div>
-                  <div style={{ color: '#888', fontSize: 13 }}>Level {f.level} | {f.wins}W-{f.losses}L</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div onClick={(e) => {
+                    e.stopPropagation();
+                    const next = new Set(challengeSelect);
+                    if (next.has(f.id)) next.delete(f.id); else if (next.size < 7) next.add(f.id);
+                    setChallengeSelect(next);
+                  }} style={{
+                    width: 22, height: 22, borderRadius: 4, border: '2px solid #666',
+                    background: challengeSelect.has(f.id) ? '#aa44ff' : '#333',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 14, fontWeight: 'bold', cursor: 'pointer', flexShrink: 0,
+                  }}>{challengeSelect.has(f.id) ? '✓' : ''}</div>
+                  <div>
+                    <div style={{ color: '#fff', fontSize: 17, fontWeight: 'bold' }}>{f.displayName}</div>
+                    <div style={{ color: '#888', fontSize: 13 }}>Level {f.level} | {f.wins}W-{f.losses}L</div>
+                  </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ color: '#cc2244', fontSize: 14, fontWeight: 'bold' }}>
                     H2H: {f.h2h.wins}-{f.h2h.losses}{f.h2h.draws > 0 ? `-${f.h2h.draws}` : ''}
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); onChallenge(f.id); }} style={{
+                  <button onClick={(e) => { e.stopPropagation(); onChallenge([f.id]); }} style={{
                     marginTop: 4, background: '#cc2244', color: '#fff', border: 'none',
                     borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 'bold', cursor: 'pointer',
                   }}>CHALLENGE</button>
@@ -262,7 +286,7 @@ export function Friends({ onBack, onChallenge, onAcceptChallenge, onViewResult }
             }
 
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => onChallenge(selectedFriend.id)} style={{
+              <button onClick={() => onChallenge([selectedFriend.id])} style={{
                 flex: 1, background: '#cc2244', color: '#fff', border: 'none', borderRadius: 8,
                 padding: '10px', fontSize: 15, fontWeight: 'bold', cursor: 'pointer',
               }}>CHALLENGE</button>

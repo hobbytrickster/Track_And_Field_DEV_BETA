@@ -96,8 +96,11 @@ export function runRace(request: RaceRequest): {
     }
   }
 
+  // Random lane assignment for the player
+  const playerLane = Math.floor(Math.random() * 8) + 1;
+
   const playerRunner: SimRunnerInput = {
-    lane: 4,
+    lane: playerLane,
     displayName: user.displayName,
     stats: template.stats,
     bonusStats: {
@@ -114,7 +117,7 @@ export function runRace(request: RaceRequest): {
 
   const runners: SimRunnerInput[] = [];
   for (let i = 1; i <= 8; i++) {
-    if (i === 4) {
+    if (i === playerLane) {
       runners.push(playerRunner);
     } else {
       runners.push(generateBotRunner(i, template.overallRating + Math.floor((Math.random() - 0.5) * 20), eventType));
@@ -134,9 +137,9 @@ export function runRace(request: RaceRequest): {
   for (const result of simulation.results) {
     db.raceParticipants.push({
       id: uuid(), raceId,
-      userId: result.lane === 4 ? userId : 'bot',
+      userId: result.lane === playerLane ? userId : 'bot',
       displayName: result.displayName,
-      userAthleteId: result.lane === 4 ? userAthleteId : undefined,
+      userAthleteId: result.lane === playerLane ? userAthleteId : undefined,
       lane: result.lane,
       finishTimeMs: result.finishTimeMs,
       finishPosition: result.finishPosition,
@@ -144,7 +147,7 @@ export function runRace(request: RaceRequest): {
   }
 
   // Save every race time for the player (keep top 10 per user per event)
-  const playerResult = simulation.results.find(r => r.lane === 4);
+  const playerResult = simulation.results.find(r => r.lane === playerLane);
   if (playerResult && playerResult.finishTimeMs < 999999) {
     if (!db.records) db.records = [];
     db.records.push({
@@ -192,7 +195,7 @@ export function runRace(request: RaceRequest): {
 
   saveDb();
 
-  return { simulation, raceId, rewards: { coinsEarned, xpEarned } };
+  return { simulation, raceId, playerLane, rewards: { coinsEarned, xpEarned } };
 }
 
 // ═══════════════════════════════════════════════════════════

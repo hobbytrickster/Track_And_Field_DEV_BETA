@@ -92,8 +92,8 @@ export const api = {
   getFriendHistory: (friendId: string) => request(`/friends/${friendId}/history`),
 
   // Challenges
-  createChallenge: (friendId: string, eventType: string, userAthleteId: string, boostIds: string[]) =>
-    request('/challenge/create', { method: 'POST', body: JSON.stringify({ friendId, eventType, userAthleteId, boostIds }) }),
+  createChallenge: (friendId: string, eventType: string, userAthleteId: string, boostIds: string[], friendIds?: string[]) =>
+    request('/challenge/create', { method: 'POST', body: JSON.stringify({ friendId, friendIds, eventType, userAthleteId, boostIds }) }),
   submitChallenge: (challengeId: string, userAthleteId: string, boostIds: string[]) =>
     request('/challenge/submit', { method: 'POST', body: JSON.stringify({ challengeId, userAthleteId, boostIds }) }),
   declineChallenge: (challengeId: string) =>

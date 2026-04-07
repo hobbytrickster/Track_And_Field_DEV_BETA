@@ -32,7 +32,7 @@ export function registerRaceRoutes(app: FastifyInstance) {
         raceId: result.raceId,
         simulation: result.simulation,
         rewards: result.rewards,
-        playerLane: 4,
+        playerLane: result.playerLane,
         user: user ? {
           coins: user.coins, xp: user.xp, level: user.level,
           wins: user.wins, losses: user.losses,

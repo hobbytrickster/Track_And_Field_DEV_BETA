@@ -31,32 +31,42 @@ function checkExpiredChallenges() {
 }
 
 export function registerChallengeRoutes(app: FastifyInstance) {
-  // Create a challenge (creator submits their athlete + boosts inline)
+  // Create a challenge (supports 1-7 friends, up to 8 total players)
   app.post('/api/challenge/create', async (request, reply) => {
     const userId = authenticate(request, reply);
     if (!userId) return;
 
-    const { friendId, eventType, userAthleteId, boostIds } = request.body as {
-      friendId: string;
+    const { friendId, friendIds, eventType, userAthleteId, boostIds } = request.body as {
+      friendId?: string;       // single friend (backwards compat)
+      friendIds?: string[];    // multiple friends
       eventType: EventType;
       userAthleteId: string;
       boostIds: string[];
     };
 
-    if (!friendId || !eventType || !userAthleteId) {
-      return reply.status(400).send({ error: 'friendId, eventType, and userAthleteId are required' });
+    // Support both single friendId and array friendIds
+    const invitees = friendIds || (friendId ? [friendId] : []);
+    if (invitees.length === 0 || !eventType || !userAthleteId) {
+      return reply.status(400).send({ error: 'At least one friend, eventType, and userAthleteId are required' });
+    }
+    if (invitees.length > 7) {
+      return reply.status(400).send({ error: 'Maximum 7 friends (8 total players)' });
     }
     if (!['200m', '400m', '800m'].includes(eventType)) {
       return reply.status(400).send({ error: 'Invalid event type' });
     }
 
     const db = getDb();
-
-    // Verify friendship
     if (!db.friendships) db.friendships = [];
-    const [a, b] = [userId, friendId].sort();
-    const isFriend = db.friendships.some(f => f.userA === a && f.userB === b);
-    if (!isFriend) return reply.status(400).send({ error: 'You can only challenge friends' });
+
+    // Verify all invitees are friends
+    for (const fid of invitees) {
+      const [a, b] = [userId, fid].sort();
+      if (!db.friendships.some(f => f.userA === a && f.userB === b)) {
+        const friendUser = db.users.find(u => u.id === fid);
+        return reply.status(400).send({ error: `${friendUser?.displayName || fid} is not your friend` });
+      }
+    }
 
     // Verify athlete ownership
     const athlete = db.userAthletes.find(at => at.id === userAthleteId && at.userId === userId);
@@ -73,6 +83,11 @@ export function registerChallengeRoutes(app: FastifyInstance) {
       }
     }
 
+    // Assign random lanes for all participants
+    const totalPlayers = 1 + invitees.length;
+    const allLanes = [1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5);
+    const assignedLanes = allLanes.slice(0, totalPlayers);
+
     const challengeId = uuid();
     const expiresAt = new Date(Date.now() + EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
 
@@ -82,27 +97,29 @@ export function registerChallengeRoutes(app: FastifyInstance) {
       creatorId: userId,
       status: 'pending',
       seed: Date.now(),
-      maxPlayers: 2,
+      maxPlayers: totalPlayers,
       expiresAt,
       simulationResult: null,
       createdAt: new Date().toISOString(),
       completedAt: null,
     });
 
-    // Creator entry — lane 4
+    // Creator entry — random lane
     db.challengeEntries.push({
       id: uuid(), challengeId, userId,
       userAthleteId, boostIds: validBoostIds,
-      lane: 4, status: 'submitted', viewedResult: false,
+      lane: assignedLanes[0], status: 'submitted', viewedResult: false,
       createdAt: new Date().toISOString(),
     });
 
-    // Opponent entry — lane 5, invited
-    db.challengeEntries.push({
-      id: uuid(), challengeId, userId: friendId,
-      userAthleteId: '', boostIds: [],
-      lane: 5, status: 'invited', viewedResult: false,
-      createdAt: new Date().toISOString(),
+    // Opponent entries — each gets a random lane, status: invited
+    invitees.forEach((fid, i) => {
+      db.challengeEntries.push({
+        id: uuid(), challengeId, userId: fid,
+        userAthleteId: '', boostIds: [],
+        lane: assignedLanes[i + 1], status: 'invited', viewedResult: false,
+        createdAt: new Date().toISOString(),
+      });
     });
 
     saveDb();
@@ -150,9 +167,9 @@ export function registerChallengeRoutes(app: FastifyInstance) {
     entry.status = 'submitted';
     saveDb();
 
-    // All entries submitted — run the race
+    // Race only runs when ALL invited players have submitted (no declines allowed for multi)
     const allEntries = db.challengeEntries.filter(e => e.challengeId === challengeId);
-    const allSubmitted = allEntries.every(e => e.status === 'submitted' || e.status === 'declined');
+    const allSubmitted = allEntries.every(e => e.status === 'submitted');
 
     if (allSubmitted) {
       try {
@@ -229,14 +246,24 @@ export function registerChallengeRoutes(app: FastifyInstance) {
       const opponentUser = opponent ? db.users.find(u => u.id === opponent.userId) : null;
       const myEntry = entries.find(e => e.userId === userId);
 
+      const allCEntries = db.challengeEntries.filter(e => e.challengeId === cid);
+      const opponents = allCEntries.filter(e => e.userId !== userId);
+      const opponentNames = opponents.map(e => {
+        const u = db.users.find(u2 => u2.id === e.userId);
+        return u?.displayName || 'Unknown';
+      });
+      const submittedCount = allCEntries.filter(e => e.status === 'submitted').length;
+      const totalCount = allCEntries.length;
+
       return {
         challengeId: ch.id,
         eventType: ch.eventType,
         status: ch.status,
-        opponentName: opponentUser?.displayName || 'Unknown',
-        opponentId: opponent?.userId,
+        opponentName: opponentNames.join(', '),
+        opponentNames,
         isCreator: ch.creatorId === userId,
         myEntry: myEntry ? { status: myEntry.status, viewedResult: myEntry.viewedResult } : null,
+        progress: `${submittedCount}/${totalCount}`,
         createdAt: ch.createdAt,
       };
     })
