@@ -12,6 +12,7 @@ import {
   BOOST_DROP_RATES,
   ATHLETE_TEMPLATES,
   BOOST_TEMPLATES,
+  RARITY_STAT_RANGES,
 } from '@track-stars/shared';
 
 function pickRarity(rates: Record<Rarity, number>): Rarity {
@@ -54,7 +55,19 @@ export function openPack(userId: string, packType: PackType): PackContents {
     // Generate a unique name for this packed card
     const { fullName, nationality } = generateAthleteName(existingNames);
     existingNames.add(fullName);
-    const namedTemplate = { ...template, name: fullName, nationality };
+
+    // For all rarities: randomize stats within the rarity range for variety
+    const range = RARITY_STAT_RANGES[rarity];
+    const randStat = () => Math.floor(range.min + Math.random() * (range.max - range.min));
+    let speed = randStat(), stamina = randStat(), acceleration = randStat(), form = randStat();
+    // Specialty boost
+    const event = template.specialtyEvent;
+    if (event === '200m') { speed = Math.min(99, speed + 5); acceleration = Math.min(99, acceleration + 4); }
+    if (event === '400m') { speed = Math.min(99, speed + 3); stamina = Math.min(99, stamina + 3); }
+    if (event === '800m') { stamina = Math.min(99, stamina + 5); form = Math.min(99, form + 4); }
+    const overallRating = Math.round(speed * 0.35 + stamina * 0.25 + acceleration * 0.25 + form * 0.15);
+
+    const namedTemplate = { ...template, name: fullName, nationality, stats: { speed, stamina, acceleration, form }, overallRating };
     athletes.push(namedTemplate);
 
     // Generate a random appearance for each packed athlete

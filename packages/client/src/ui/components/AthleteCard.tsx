@@ -1,6 +1,20 @@
 import React, { useRef, useEffect } from 'react';
 import { UserAthlete } from '@track-stars/shared';
 
+// Inject superstar shimmer animation once
+if (typeof document !== 'undefined' && !document.getElementById('ss-card-shimmer')) {
+  const style = document.createElement('style');
+  style.id = 'ss-card-shimmer';
+  style.textContent = `
+    @keyframes ssCardShimmer {
+      0% { background-position: 100% 50%; }
+      50% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 interface Props {
   athlete: UserAthlete;
   selected?: boolean;
@@ -41,16 +55,22 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
   if (!t) return null;
 
   const displayName = (athlete as any).appearance?.customName || t.name;
+  const isSS = t.rarity === 'superstar';
 
   if (compact) {
     return (
       <div onClick={onClick} style={{
-        background: RARITY_BG[t.rarity],
-        border: selected ? '3px solid #FFD700' : '2px solid #333',
+        background: isSS
+          ? 'linear-gradient(135deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
+          : RARITY_BG[t.rarity],
+        backgroundSize: isSS ? '300% 100%' : undefined,
+        animation: isSS ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
+        border: selected ? '3px solid #FFD700' : isSS ? '2px solid #cc66ff' : '2px solid #333',
         borderRadius: 12, padding: '12px', cursor: onClick ? 'pointer' : 'default',
         width: 180, height: 200, textAlign: 'center', transition: 'transform 0.15s',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         transform: selected ? 'scale(1.05)' : 'scale(1)',
+        boxShadow: isSS ? '0 0 12px rgba(170,68,255,0.4)' : undefined,
       }}>
         <div style={{ fontSize: 15, color: '#fff', fontWeight: 'bold' }}>{displayName}</div>
         <MiniRunner appearance={(athlete as any).appearance} jerseyFallback={RARITY_COLORS[t.rarity] || '#ff4444'} />
@@ -71,12 +91,16 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
 
   return (
     <div onClick={onClick} style={{
-      background: RARITY_BG[t.rarity],
-      border: selected ? '3px solid #FFD700' : '2px solid #444',
+      background: isSS
+        ? 'linear-gradient(135deg, #6600aa 0%, #8833cc 20%, #cc77ff 40%, #dd99ff 50%, #cc77ff 60%, #8833cc 80%, #6600aa 100%)'
+        : RARITY_BG[t.rarity],
+      backgroundSize: isSS ? '300% 100%' : undefined,
+      animation: isSS ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
+      border: selected ? '3px solid #FFD700' : isSS ? '2px solid #cc66ff' : '2px solid #444',
       borderRadius: 14, padding: '16px', cursor: onClick ? 'pointer' : 'default',
       width: 240, transition: 'transform 0.15s',
       transform: selected ? 'scale(1.05)' : 'scale(1)',
-      boxShadow: selected ? '0 0 20px rgba(255,215,0,0.5)' : '0 4px 12px rgba(0,0,0,0.3)',
+      boxShadow: isSS ? '0 0 15px rgba(170,68,255,0.5)' : selected ? '0 0 20px rgba(255,215,0,0.5)' : '0 4px 12px rgba(0,0,0,0.3)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>{t.rarity}</span>
