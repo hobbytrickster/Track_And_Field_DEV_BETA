@@ -414,32 +414,36 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
         const gap = dist(specialty, eventType);
 
         if (specialty === '200m' && eventType === '800m') {
-          // Sprinter in 800m — disastrous, they completely fall apart
-          staminaPenalty = 45;
-          formPenalty = 35;
-          speedPenalty = 15;
-        } else if (specialty === '800m' && eventType === '200m') {
-          // Distance runner in 200m — hopelessly slow, no explosiveness
-          speedPenalty = 40;
-          accelPenalty = 45;
-        } else if (specialty === '200m' && eventType === '400m') {
-          // Sprinter in 400m — fades hard in the second half
-          staminaPenalty = 30;
-          formPenalty = 15;
-          speedPenalty = 5;
-        } else if (specialty === '400m' && eventType === '200m') {
-          // 400m runner in 200m — can't match pure sprinters
-          accelPenalty = 25;
+          // Sprinter in 800m — catastrophic, completely wrong physiology
+          staminaPenalty = 55;
+          formPenalty = 45;
           speedPenalty = 20;
-        } else if (specialty === '400m' && eventType === '800m') {
-          // 400m runner in 800m — dies on second lap
-          staminaPenalty = 35;
-          formPenalty = 20;
-          speedPenalty = 5;
-        } else if (specialty === '800m' && eventType === '400m') {
-          // 800m runner in 400m — way too slow for one-lap speed
+          accelPenalty = 10;
+        } else if (specialty === '800m' && eventType === '200m') {
+          // Distance runner in 200m — no fast-twitch, no explosiveness
+          speedPenalty = 50;
+          accelPenalty = 55;
+          formPenalty = 15;
+        } else if (specialty === '200m' && eventType === '400m') {
+          // Sprinter in 400m — fades badly, wrong energy system
+          staminaPenalty = 40;
+          formPenalty = 25;
+          speedPenalty = 10;
+        } else if (specialty === '400m' && eventType === '200m') {
+          // 400m runner in 200m — lacks pure sprint ability
+          accelPenalty = 35;
           speedPenalty = 30;
-          accelPenalty = 25;
+          formPenalty = 10;
+        } else if (specialty === '400m' && eventType === '800m') {
+          // 400m runner in 800m — can't sustain for 2 laps
+          staminaPenalty = 45;
+          formPenalty = 30;
+          speedPenalty = 10;
+        } else if (specialty === '800m' && eventType === '400m') {
+          // 800m runner in 400m — way too slow, no raw speed
+          speedPenalty = 40;
+          accelPenalty = 35;
+          formPenalty = 10;
         }
       }
 
