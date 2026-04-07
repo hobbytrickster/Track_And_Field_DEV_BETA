@@ -343,6 +343,40 @@ export class RaceScene extends Phaser.Scene {
       this.speedBtns.push(btn);
     });
 
+    // ── HUD: Player's Big Impact Card ──
+    // Find the player's boost name by scanning frames for active boosts on their lane
+    let playerBoostName = '';
+    for (const frame of this.frames) {
+      const runner = frame.runners.find(r => r.lane === this.playerLane);
+      if (runner && runner.activeBoosts.length > 0) {
+        playerBoostName = runner.activeBoosts[0];
+        break;
+      }
+    }
+    const boostEmojis: Record<string, string> = {
+      'Perfect Start': '🚀', 'Turbo Start': '🚀', 'Adrenaline Rush': '🔥',
+      'Second Wind': '💨', 'Speed Burst': '⚡', 'Final Kick': '⚡',
+      'Thunder Strike': '⚡', 'Intimidate': '😤', 'Draft Surge': '🌊',
+      'Iron Legs': '🦿', 'Crowd Favorite': '👑', 'Zen Focus': '🧘',
+    };
+    this.playerBoostName = playerBoostName;
+    if (playerBoostName) {
+      const emoji = boostEmojis[playerBoostName] || '⭐';
+      const boostBg = this.add.rectangle(20 + 75, H - 70, 150, 50, 0x000000, 0.6)
+        .setStrokeStyle(1, 0x00ccff, 0.6).setDepth(10).setOrigin(0, 0.5);
+      this.boostCardBg = boostBg;
+      this.add.text(28, H - 70, emoji, {
+        fontSize: '24px',
+      }).setOrigin(0, 0.5).setDepth(11);
+      const boostLabel = this.add.text(55, H - 78, playerBoostName, {
+        fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold',
+        color: '#00ccff', stroke: '#000', strokeThickness: 1,
+      }).setDepth(11);
+      this.add.text(55, H - 64, 'BIG IMPACT', {
+        fontSize: '9px', fontFamily: 'Arial', color: '#888',
+      }).setDepth(11);
+    }
+
     // ── HUD: Minimap ──
     this.add.rectangle(W - 90, 55, 155, 95, 0x000000, 0.5)
       .setStrokeStyle(1, 0xffffff, 0.4).setDepth(10);
@@ -479,7 +513,9 @@ export class RaceScene extends Phaser.Scene {
     turfImg.setMask(maskGfx.createGeometryMask());
   }
 
-  private countdownId: number = 0; // increments each countdown to kill stale ones
+  private countdownId: number = 0;
+  private boostCardBg: Phaser.GameObjects.Rectangle | null = null;
+  private playerBoostName: string = ''; // increments each countdown to kill stale ones
 
   private startCountdown() {
     if ('speechSynthesis' in window) {
@@ -982,6 +1018,20 @@ export class RaceScene extends Phaser.Scene {
       } else {
         rv.boostGlow.setFillStyle(0x000000, 0);
         rv.boostGlow.setStrokeStyle(0);
+      }
+    }
+
+    // Update Big Impact card glow when boost is active
+    if (this.boostCardBg && this.playerBoostName) {
+      const playerRunner = frame.runners.find(r => r.lane === this.playerLane);
+      const isActive = playerRunner?.activeBoosts.includes(this.playerBoostName);
+      if (isActive) {
+        const pulse = 0.6 + Math.sin(this.currentFrame * 0.15) * 0.3;
+        this.boostCardBg.setFillStyle(0x003344, 0.8);
+        this.boostCardBg.setStrokeStyle(2, 0x00ffff, pulse);
+      } else {
+        this.boostCardBg.setFillStyle(0x000000, 0.6);
+        this.boostCardBg.setStrokeStyle(1, 0x00ccff, 0.6);
       }
     }
 
