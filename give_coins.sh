@@ -19,6 +19,12 @@ fi
 PLAYER="$1"
 AMOUNT="$2"
 
+# STOP the container FIRST so it flushes its data to disk
+echo "Stopping container..."
+podman stop winbig-track 2>/dev/null || true
+sleep 2
+
+# NOW edit the file (container is fully stopped, no more writes)
 python3 -c "
 import json, sys
 
@@ -44,9 +50,7 @@ print(f'  Before: {old} coins')
 print(f'  After:  {user[\"coins\"]} coins')
 "
 
-echo "Stopping container..."
-podman stop winbig-track 2>/dev/null || echo "  (no container to stop)"
-sleep 1
+# Start the container back up (reads the edited file)
 echo "Starting container..."
 podman start winbig-track 2>/dev/null || echo "  (no container to start)"
 echo "✅ Done."
