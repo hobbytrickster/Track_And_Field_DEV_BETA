@@ -44,6 +44,9 @@ print(f'  Before: {old} coins')
 print(f'  After:  {user[\"coins\"]} coins')
 "
 
-echo "Restarting container..."
-podman restart winbig-track 2>/dev/null || echo "  (no container to restart)"
+echo "Stopping container..."
+podman stop winbig-track 2>/dev/null || echo "  (no container to stop)"
+sleep 1
+echo "Starting container..."
+podman start winbig-track 2>/dev/null || echo "  (no container to start)"
 echo "✅ Done."

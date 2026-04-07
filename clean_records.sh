@@ -26,6 +26,9 @@ with open('$DATA_FILE', 'w') as f:
 print('  Done!')
 "
 
-echo "Restarting container..."
-podman restart winbig-track 2>/dev/null || echo "  (no container to restart)"
+echo "Stopping container..."
+podman stop winbig-track 2>/dev/null || true
+sleep 1
+echo "Starting container..."
+podman start winbig-track 2>/dev/null || true
 echo "✅ Timing records cleared. All other data preserved."
