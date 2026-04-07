@@ -96,7 +96,7 @@ export class RaceScene extends Phaser.Scene {
   private lastSplitDistance: number = 0;
 
   constructor() {
-    super({ key: 'RaceScene' });
+    super({ key: 'RaceScene', active: false, visible: false });
   }
 
   init(data: {
