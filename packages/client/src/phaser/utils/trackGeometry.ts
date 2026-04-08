@@ -555,7 +555,8 @@ export function getRaceProgressLength(
   eventType: string,
   cfg: TrackConfig = DEFAULT_TRACK_CONFIG,
 ): number {
-  const raceMeters = eventType === '200m' ? 200 : eventType === '400m' ? 400 : 800;
+  const distances: Record<string, number> = { '200m': 200, '400m': 400, '800m': 800, '2000mSC': 2000 };
+  const raceMeters = distances[eventType] || 400;
   const lane1Perim = getTrackPerimeter(1, cfg);
   const lanePerim = getTrackPerimeter(lane, cfg);
   return (raceMeters / 400) * (lane1Perim / lanePerim);
@@ -574,19 +575,22 @@ export function getStartProgress(
 ): number {
   if (eventType === '800m') {
     // 800m stagger only covers one curve (not a full 400m lap).
-    // Stagger = extra distance in one semicircle for this lane vs lane 1.
     const r1 = cfg.innerRadius + (1 - 0.5) * cfg.laneWidth;
     const rN = cfg.innerRadius + (lane - 0.5) * cfg.laneWidth;
-    const staggerPixels = Math.PI * (rN - r1); // one semicircle difference
+    const staggerPixels = Math.PI * (rN - r1);
     const lanePerim = getTrackPerimeter(lane, cfg);
     const lane1Perim = getTrackPerimeter(1, cfg);
-
-    // 800m = 2 laps. Convert 800m to lane-specific progress.
     const raceProgress = (800 / 400) * (lane1Perim / lanePerim);
     const finish = getFinishProgress(lane, cfg);
-    // Start = finish - raceProgress, then shift forward by stagger
     const lane1Start = getFinishProgress(1, cfg) - (800 / 400);
     return lane1Start + staggerPixels / lanePerim;
+  }
+  if (eventType === '2000mSC') {
+    // Steeplechase: all runners start at the same progress point (no stagger)
+    // but spread across lanes visually. Start position is 5 laps back from finish.
+    const raceProgress = 2000 / 400; // 5 laps in lane 1
+    const finish = getFinishProgress(1, cfg);
+    return finish - raceProgress;
   }
   return getFinishProgress(lane, cfg) - getRaceProgressLength(lane, eventType, cfg);
 }
@@ -606,11 +610,19 @@ export function distanceToTrackProgress(
   eventType: string,
   cfg: TrackConfig = DEFAULT_TRACK_CONFIG,
 ): number {
-  const raceMeters = eventType === '200m' ? 200 : eventType === '400m' ? 400 : 800;
+  const distances: Record<string, number> = { '200m': 200, '400m': 400, '800m': 800, '2000mSC': 2000 };
+  const raceMeters = distances[eventType] || 400;
   const distFrac = distance / raceMeters; // 0 → 1
 
   if (eventType === '800m') {
     return _800mTrackProgress(lane, distance, cfg);
+  }
+
+  if (eventType === '2000mSC') {
+    // All runners in lane 1 for the entire race
+    const raceLen = (2000 / 400) * 1.0; // 5 laps
+    const finish = getFinishProgress(1, cfg);
+    return finish - raceLen * (1 - distFrac);
   }
 
   const raceLen = getRaceProgressLength(lane, eventType, cfg);
@@ -712,6 +724,170 @@ export function getEffectiveLane800(lane: number, distance: number): number {
   return spread + (1 - spread) * t2;
 }
 
+// ============================================================
+// Steeplechase Water Jump Spur
+// ============================================================
+
+/**
+ * Build the spur path for the steeplechase water jump.
+ * The spur branches off the inside of the left curve, loops inward
+ * around the water pit, and rejoins the main oval.
+ *
+ * Returns an array of points defining the spur centerline,
+ * plus the water pit rectangle.
+ */
+export interface SpurPath {
+  /** Centerline points of the spur (for runner interpolation) */
+  points: Point[];
+  /** Water pit corner positions */
+  waterPit: { x: number; y: number; size: number };
+  /** Track progress where spur diverges from main oval */
+  divergeProgress: number;
+  /** Track progress where spur converges back to main oval */
+  convergeProgress: number;
+  /** Meters in the lap where spur starts */
+  divergeMeters: number;
+  /** Meters in the lap where spur ends */
+  convergeMeters: number;
+}
+
+export function buildSpurPath(cfg: TrackConfig): SpurPath {
+  const { centerX, centerY, straightLength, innerRadius, laneWidth } = cfg;
+  const halfS = straightLength / 2;
+  const curveCenterX = centerX - halfS; // left curve center
+  const curveCenterY = centerY;
+
+  // Left curve progress: 0.712 to 1.0 (angles PI/2 to 3PI/2)
+  // Bypass covers the entire left curve
+  const divergeProgress = 0.712;
+  const convergeProgress = 1.0;
+
+  const r1 = innerRadius + 0.5 * laneWidth;
+  const divAngle = Math.PI / 2 + ((divergeProgress - 0.712) / 0.288) * Math.PI;
+  const conAngle = Math.PI / 2 + ((convergeProgress - 0.712) / 0.288) * Math.PI;
+
+  // Diverge and converge points on the main oval (lane 1)
+  const divPt = {
+    x: curveCenterX + Math.cos(divAngle) * r1,
+    y: curveCenterY - Math.sin(divAngle) * r1,
+  };
+  const conPt = {
+    x: curveCenterX + Math.cos(conAngle) * r1,
+    y: curveCenterY - Math.sin(conAngle) * r1,
+  };
+
+  // The spur is a clean rectangular bypass:
+  // diverge point → straight line inward → straight inner section → straight line back → converge point
+  const spurInward = laneWidth * 5;
+
+  // Inner points: offset inward (toward curve center) from diverge/converge
+  const divInward = { x: divPt.x - (divPt.x - curveCenterX) / r1 * spurInward, y: divPt.y - (divPt.y - curveCenterY) / r1 * spurInward };
+  // Simpler: offset each point toward the curve center by spurInward
+  const divNx = (divPt.x - curveCenterX) / r1;
+  const divNy = (divPt.y - curveCenterY) / r1;
+  const conNx = (conPt.x - curveCenterX) / r1;
+  const conNy = (conPt.y - curveCenterY) / r1;
+
+  const innerDiv = { x: divPt.x - divNx * spurInward, y: divPt.y - divNy * spurInward };
+  const innerCon = { x: conPt.x - conNx * spurInward, y: conPt.y - conNy * spurInward };
+
+  // Water pit at the midpoint of the inner section
+  const pitSize = laneWidth * 3.5;
+  const spurCenterX = (innerDiv.x + innerCon.x) / 2;
+  const spurCenterY = (innerDiv.y + innerCon.y) / 2;
+
+  // Build path as 4 segments with interpolation:
+  // 1. Diverge → inner diverge (straight line inward)
+  // 2. Inner diverge → inner converge (straight inner run)
+  // 3. Inner converge → converge (straight line back out)
+  const points: Point[] = [];
+  const segsPerLeg = 5;
+
+  // Leg 1: diverge to inner diverge
+  for (let i = 0; i <= segsPerLeg; i++) {
+    const t = i / segsPerLeg;
+    points.push({ x: divPt.x + (innerDiv.x - divPt.x) * t, y: divPt.y + (innerDiv.y - divPt.y) * t });
+  }
+  // Leg 2: inner diverge to inner converge
+  for (let i = 1; i <= segsPerLeg; i++) {
+    const t = i / segsPerLeg;
+    points.push({ x: innerDiv.x + (innerCon.x - innerDiv.x) * t, y: innerDiv.y + (innerCon.y - innerDiv.y) * t });
+  }
+  // Leg 3: inner converge to converge
+  for (let i = 1; i <= segsPerLeg; i++) {
+    const t = i / segsPerLeg;
+    points.push({ x: innerCon.x + (conPt.x - innerCon.x) * t, y: innerCon.y + (conPt.y - innerCon.y) * t });
+  }
+
+  // Convert progress to meters for the race engine
+  // progress → meters: ((progress + (1 - 0.212)) % 1) * 400
+  const divergeMeters = ((divergeProgress + 0.788) % 1) * 400;
+  const convergeMeters = ((convergeProgress + 0.788) % 1) * 400;
+
+  return {
+    points,
+    waterPit: { x: spurCenterX, y: spurCenterY, size: pitSize },
+    divergeProgress,
+    convergeProgress,
+    divergeMeters,
+    convergeMeters,
+  };
+}
+
+/**
+ * Get position on the spur path.
+ * @param t - 0 to 1 along the spur (0=diverge, 1=converge)
+ * @param laneOffset - offset from centerline (for spreading runners across lanes)
+ */
+export function getSpurPoint(spur: SpurPath, t: number, cfg: TrackConfig, laneOffset: number = 0): Point {
+  const idx = t * (spur.points.length - 1);
+  const i = Math.floor(idx);
+  const frac = idx - i;
+  const p0 = spur.points[Math.min(i, spur.points.length - 1)];
+  const p1 = spur.points[Math.min(i + 1, spur.points.length - 1)];
+  const cx = p0.x + (p1.x - p0.x) * frac;
+  const cy = p0.y + (p1.y - p0.y) * frac;
+
+  if (laneOffset === 0) return { x: cx, y: cy };
+
+  // Get tangent direction for offset
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  // Normal (perpendicular to tangent, pointing outward)
+  const nx = -dy / len;
+  const ny = dx / len;
+  return {
+    x: cx + nx * laneOffset * cfg.laneWidth,
+    y: cy + ny * laneOffset * cfg.laneWidth,
+  };
+}
+
+/**
+ * Effective lane for 2000m steeplechase runners.
+ *
+ * Runners start spread across lanes 1-6 (12 runners), merge to lanes 1-2
+ * within the first 50m, then run packed together. Near barriers they fan out
+ * to lanes 1-4, then converge again after clearing them.
+ *
+ * @param runnerIndex - 0-based index (0-11 for 12 runners)
+ * @param distance - meters traveled so far
+ * @param totalRunners - number of runners in the race
+ */
+export function getEffectiveLaneSC(runnerIndex: number, distance: number, totalRunners: number = 12): number {
+  // Phase 1: Start spread (0-60m) — runners start across lanes, merge to pack
+  const MERGE_END = 60;
+  if (distance < MERGE_END) {
+    const startLane = 1 + (runnerIndex / Math.max(1, totalRunners - 1)) * 5; // spread across lanes 1-6
+    const t = distance / MERGE_END;
+    const packLane = 1 + (runnerIndex / Math.max(1, totalRunners - 1)) * 0.8; // tight pack in lane 1
+    return startLane + (packLane - startLane) * t * t; // ease-in merge
+  }
+
+  // After merge: stay packed in lanes 1-2, no fan-out
+  return 1 + (runnerIndex / Math.max(1, totalRunners - 1)) * 0.8;
+}
+
 /**
  * Format milliseconds as a race time string.
  * Under 60s: "23.456s"
@@ -720,7 +896,7 @@ export function getEffectiveLane800(lane: number, distance: number): number {
 export function formatRaceTime(ms: number): string {
   const totalSeconds = ms / 1000;
   if (totalSeconds < 60) {
-    return `${totalSeconds.toFixed(3)}s`;
+    return `${totalSeconds.toFixed(3)}`;
   }
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds - minutes * 60;

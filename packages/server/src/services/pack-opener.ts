@@ -65,6 +65,7 @@ export function openPack(userId: string, packType: PackType): PackContents {
     if (event === '200m') { speed = Math.min(99, speed + 5); acceleration = Math.min(99, acceleration + 4); }
     if (event === '400m') { speed = Math.min(99, speed + 3); stamina = Math.min(99, stamina + 3); }
     if (event === '800m') { stamina = Math.min(99, stamina + 5); form = Math.min(99, form + 4); }
+    if (event === '2000mSC') { stamina = Math.min(99, stamina + 6); form = Math.min(99, form + 5); }
     const overallRating = Math.round(speed * 0.35 + stamina * 0.25 + acceleration * 0.25 + form * 0.15);
 
     // Re-roll split type for 800m cards (don't reuse template's fixed type)

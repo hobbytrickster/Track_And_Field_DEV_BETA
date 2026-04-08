@@ -11,6 +11,10 @@ import {
   getFinishProgress,
   distanceToTrackProgress,
   getEffectiveLane800,
+  getEffectiveLaneSC,
+  buildSpurPath,
+  getSpurPoint,
+  SpurPath,
   formatRaceTime,
   TrackConfig,
   StadiumConfig,
@@ -36,6 +40,7 @@ interface RunnerVisual {
 const LANE_COLORS = [
   0xff4444, 0x4488ff, 0x44cc44, 0xffaa00,
   0xff44ff, 0x00ddaa, 0xdddd22, 0xaa44ff,
+  0xff8866, 0x66ccff, 0x88ff88, 0xffcc44,
 ];
 const SKIN_TONES = [0xf5cba7, 0xe0ac69, 0xc68642, 0x8d5524, 0xf5cba7, 0xe0ac69, 0xc68642, 0x8d5524];
 const PLAYER_SKIN_TONES: Record<number, number> = {
@@ -93,6 +98,12 @@ export class RaceScene extends Phaser.Scene {
   private centerTimeText!: Phaser.GameObjects.Text;
   private splitsText!: Phaser.GameObjects.Text;
   private playerSplits: { distance: number; time: string }[] = [];
+  private spurPath: SpurPath | null = null;
+  private bypassOffset: number = 0;
+  /** Full steeplechase lap path: points + cumulative arc lengths */
+  private scLapPath: Point[] = [];
+  private scLapArcLen: number[] = [];
+  private scLapTotalLen: number = 0;
   private lastSplitDistance: number = 0;
 
   constructor() {
@@ -112,7 +123,7 @@ export class RaceScene extends Phaser.Scene {
     this.results = data.results;
     this.eventType = data.eventType;
     this.playerLane = data.playerLane;
-    this.raceDistance = data.eventType === '200m' ? 200 : data.eventType === '400m' ? 400 : 800;
+    this.raceDistance = data.eventType === '200m' ? 200 : data.eventType === '400m' ? 400 : data.eventType === '2000mSC' ? 2000 : 800;
     this.playbackSpeed = 1;
     this.frameAccum = 0;
     this.lastUpdateTime = 0;
@@ -166,14 +177,20 @@ export class RaceScene extends Phaser.Scene {
 
     // ── Create runners ──
     this.runners = [];
-    for (let lane = 1; lane <= 8; lane++) {
+    const totalRunners = this.frames[0]?.runners.length || (this.eventType === '2000mSC' ? 12 : 8);
+    for (let lane = 1; lane <= totalRunners; lane++) {
       const isPlayer = lane === this.playerLane;
-      const startProg = getStartProgress(lane, this.eventType, cfg);
-      const startPos = getTrackPoint(lane, startProg, cfg);
+      // Steeplechase: runners start spread across lanes on a curved line
+      const startLane = this.eventType === '2000mSC'
+        ? 1 + ((lane - 1) / Math.max(1, totalRunners - 1)) * 5 // spread across lanes 1-6
+        : lane;
+      const startProg = getStartProgress(this.eventType === '2000mSC' ? 1 : lane, this.eventType, cfg);
+      const startPos = getTrackPoint(startLane, startProg, cfg);
 
       const gfx = this.add.graphics();
       // Label: use laneLabels if available (challenges show friend names)
-      const laneLabel = this.laneLabels[lane] || (isPlayer ? 'YOU' : `L${lane}`);
+      const laneLabel = this.laneLabels[lane] || (isPlayer ? 'YOU'
+        : this.eventType === '2000mSC' ? `#${lane}` : `L${lane}`);
       const isLabeled = !!this.laneLabels[lane]; // has a special label (human player in challenge)
       const label = this.add.text(startPos.x, startPos.y - 28, laneLabel, {
         fontSize: (isPlayer || isLabeled) ? '13px' : '10px',
@@ -206,41 +223,52 @@ export class RaceScene extends Phaser.Scene {
 
     // ── Start lines + lane numbers ──
     const startLineGfx = this.add.graphics().setDepth(3);
-    for (let lane = 1; lane <= 8; lane++) {
-      const startProg = getStartProgress(lane, this.eventType, cfg);
-      const p1 = getTrackPoint(lane, startProg, cfg);
-      // Direction vector (tangent to track at start point)
-      const p2 = getTrackPoint(lane, startProg + 0.001, cfg);
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      const tx = dx / len; // tangent (forward direction)
-      const ty = dy / len;
-      const nx = -ty;      // normal (perpendicular)
-      const ny = tx;
-      const halfW = cfg.laneWidth / 2;
-
-      // White start line across the lane
+    if (this.eventType === '2000mSC') {
+      // Steeplechase: single curved start line across all lanes
+      const startProg = getStartProgress(1, this.eventType, cfg);
       startLineGfx.lineStyle(2, 0xffffff, 0.8);
       startLineGfx.beginPath();
-      startLineGfx.moveTo(p1.x + nx * halfW, p1.y + ny * halfW);
-      startLineGfx.lineTo(p1.x - nx * halfW, p1.y - ny * halfW);
+      const firstPt = getTrackPoint(1, startProg, cfg);
+      startLineGfx.moveTo(firstPt.x, firstPt.y);
+      for (let l = 1.5; l <= 8; l += 0.5) {
+        const pt = getTrackPoint(l, startProg, cfg);
+        startLineGfx.lineTo(pt.x, pt.y);
+      }
       startLineGfx.strokePath();
+    } else {
+      for (let lane = 1; lane <= 8; lane++) {
+        const startProg = getStartProgress(lane, this.eventType, cfg);
+        const p1 = getTrackPoint(lane, startProg, cfg);
+        const p2 = getTrackPoint(lane, startProg + 0.001, cfg);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const tx = dx / len;
+        const ty = dy / len;
+        const nx = -ty;
+        const ny = tx;
+        const halfW = cfg.laneWidth / 2;
 
-      // Lane number behind the start line (offset backward from runner's perspective)
-      const numOffset = cfg.laneWidth * 0.8; // how far behind the line
-      const numX = p1.x - tx * numOffset;
-      const numY = p1.y - ty * numOffset;
-      const angle = Math.atan2(ty, tx) + Math.PI / 2; // 90° clockwise so number reads upright in-lane
+        startLineGfx.lineStyle(2, 0xffffff, 0.8);
+        startLineGfx.beginPath();
+        startLineGfx.moveTo(p1.x + nx * halfW, p1.y + ny * halfW);
+        startLineGfx.lineTo(p1.x - nx * halfW, p1.y - ny * halfW);
+        startLineGfx.strokePath();
 
-      const numText = this.add.text(numX, numY, `${lane}`, {
-        fontSize: `${Math.round(cfg.laneWidth * 0.75)}px`,
-        fontFamily: 'Arial Black, sans-serif',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: 2,
-      }).setOrigin(0.5, 0.5).setRotation(angle).setDepth(3);
+        const numOffset = cfg.laneWidth * 0.8;
+        const numX = p1.x - tx * numOffset;
+        const numY = p1.y - ty * numOffset;
+        const angle = Math.atan2(ty, tx) + Math.PI / 2;
+
+        this.add.text(numX, numY, `${lane}`, {
+          fontSize: `${Math.round(cfg.laneWidth * 0.75)}px`,
+          fontFamily: 'Arial Black, sans-serif',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 2,
+        }).setOrigin(0.5, 0.5).setRotation(angle).setDepth(3);
+      }
     }
 
     // ── 800m break line + cones ──
@@ -275,6 +303,244 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
+    // ── Steeplechase: water jump bypass + barriers ──
+    if (this.eventType === '2000mSC') {
+      const barrierGfx = this.add.graphics().setDepth(4);
+      const fillGfx = this.add.graphics().setDepth(2);
+
+      const trackColor = this.stadiumConfig?.trackColor || 0xcc4422;
+      const halfS = cfg.straightLength / 2;
+      const curveCX = cfg.centerX - halfS;
+      const curveCY = cfg.centerY;
+      const innerR = cfg.innerRadius;
+      const lw = cfg.laneWidth;
+
+      const pitSize = lw * 3.5;
+      const wpY = curveCY;
+
+      // ── Bypass ellipse: lanes 1 & 4 at junctions, outer kisses lane 1 inner at leftmost point ──
+      const Ry = innerR + 0.5 * lw; // matches lane 1 center at junctions
+      const innerOff = Ry - innerR; // 0.5*lw — inner line meets lane 1 inner at junctions
+      const outerOff = (innerR + 4 * lw) - Ry; // 3.5*lw — outer line meets lane 4 outer at junctions
+      // Rx sized so outer dashed line touches lane 1 inner at the leftmost point
+      const Rx = innerR - outerOff; // at angle PI: outer_x = curveCX - Rx - outerOff = curveCX - innerR
+      const wpX = curveCX - Rx; // water pit center at ellipse leftmost
+      const offset = (innerOff + outerOff) / 2;
+      this.bypassOffset = offset;
+
+      // At top/bottom: outer offset = Ry + offset = innerR + 4*lw = lane 4 outer edge ✓
+      // At top/bottom: inner offset = Ry - offset = innerR = lane 1 inner edge ✓
+      // At left: outer passes at wpX - offset, inner at wpX + offset (clears pit)
+
+      // Build center ellipse path first, then offset by constant distance along normals
+      const centerPts: { x: number; y: number; nx: number; ny: number }[] = [];
+      for (let a = Math.PI / 2; a <= 3 * Math.PI / 2; a += 0.015) {
+        const cx2 = curveCX + Math.cos(a) * Rx;
+        const cy2 = curveCY - Math.sin(a) * Ry;
+        centerPts.push({ x: cx2, y: cy2, nx: 0, ny: 0 });
+      }
+      // Compute normals from adjacent points (numerical, ensures constant-distance offset)
+      for (let i = 0; i < centerPts.length; i++) {
+        const prev = centerPts[Math.max(0, i - 1)];
+        const next = centerPts[Math.min(centerPts.length - 1, i + 1)];
+        const tdx = next.x - prev.x;
+        const tdy = next.y - prev.y;
+        const tlen = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
+        // Normal: perpendicular to tangent, pointing outward (away from ellipse center)
+        centerPts[i].nx = -tdy / tlen;
+        centerPts[i].ny = tdx / tlen;
+      }
+
+      const buildOffsetCurve = (off: number): Point[] => {
+        const pts: Point[] = [];
+        for (const cp of centerPts) {
+          pts.push({ x: cp.x + cp.nx * off, y: cp.y + cp.ny * off });
+        }
+        return pts;
+      };
+
+      const outerCurve = buildOffsetCurve(outerOff);   // offset outward to lane 4 outer
+      const innerCurve = buildOffsetCurve(-innerOff);   // offset inward to lane 1 inner
+
+      // ── Fill: area between lane 1 inner edge and inner dashed curve ──
+      // Touches the regular track (no gap) and stops at the inner dashed line (no overflow)
+      fillGfx.fillStyle(trackColor, 1.0);
+      fillGfx.beginPath();
+      // Lane 1 inner edge arc — top to bottom (this is where regular track ends)
+      for (let a = Math.PI / 2; a <= 3 * Math.PI / 2; a += 0.02) {
+        const x = curveCX + Math.cos(a) * innerR;
+        const y = curveCY - Math.sin(a) * innerR;
+        if (a === Math.PI / 2) fillGfx.moveTo(x, y);
+        else fillGfx.lineTo(x, y);
+      }
+      // Inner dashed curve — bottom back to top (closes the polygon)
+      for (let i = innerCurve.length - 1; i >= 0; i--) {
+        fillGfx.lineTo(innerCurve[i].x, innerCurve[i].y);
+      }
+      fillGfx.closePath();
+      fillGfx.fill();
+
+      // ── Dashed lines ──
+      const drawDashedPath = (pts: Point[]) => {
+        const dashLen = 8;
+        const gapLen = 6;
+        let drawing = true;
+        let accum = 0;
+        barrierGfx.lineStyle(1.5, 0xffffff, 0.7);
+        for (let i = 1; i < pts.length; i++) {
+          const dx = pts[i].x - pts[i-1].x;
+          const dy = pts[i].y - pts[i-1].y;
+          accum += Math.sqrt(dx * dx + dy * dy);
+          if (drawing) {
+            barrierGfx.lineBetween(pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y);
+            if (accum >= dashLen) { drawing = false; accum = 0; }
+          } else {
+            if (accum >= gapLen) { drawing = true; accum = 0; }
+          }
+        }
+      };
+
+      drawDashedPath(outerCurve);
+      drawDashedPath(innerCurve);
+
+      // ── Water pit — centered between the two dashed lines ──
+      const wpDrawX = wpX - (outerOff - innerOff) / 2;
+      // Water pit base
+      barrierGfx.fillStyle(0x0d4477, 0.8);
+      barrierGfx.fillRect(wpDrawX - pitSize / 2, wpY - pitSize / 2, pitSize, pitSize);
+      // Lighter ripple bands (horizontal wavy lines)
+      const wl = wpDrawX - pitSize / 2;
+      const wt = wpY - pitSize / 2;
+      for (let row = 0; row < 5; row++) {
+        const ry = wt + pitSize * (0.15 + row * 0.18);
+        barrierGfx.lineStyle(1.2, 0x3399dd, 0.35 - row * 0.04);
+        barrierGfx.beginPath();
+        for (let x = 0; x <= pitSize; x += 2) {
+          const wx = wl + x;
+          const wy = ry + Math.sin(x * 0.3 + row * 1.5) * 1.5;
+          if (x === 0) barrierGfx.moveTo(wx, wy);
+          else barrierGfx.lineTo(wx, wy);
+        }
+        barrierGfx.strokePath();
+      }
+      // Border
+      barrierGfx.lineStyle(1.5, 0x003366, 0.7);
+      barrierGfx.strokeRect(wpDrawX - pitSize / 2, wpY - pitSize / 2, pitSize, pitSize);
+      barrierGfx.fillStyle(0x663300, 0.95);
+      barrierGfx.fillRect(wpDrawX - pitSize / 2 - 1, wpY - pitSize / 2 - 3, pitSize + 2, 4);
+      barrierGfx.fillStyle(0xffffff, 0.75);
+      barrierGfx.fillRect(wpDrawX - pitSize / 2 + 3, wpY - pitSize / 2 - 2, pitSize - 6, 2);
+
+      // ── Build full steeplechase lap path (one continuous loop) ──
+      // Build lap path starting from the FINISH LINE (progress ~0.212) so distance=0 matches start position
+      // Path: finish → right curve → top straight → bypass ellipse → bottom straight → back to finish
+      this.scLapPath = [];
+      this.scLapArcLen = [0];
+
+      const scTrackLane = 1; // runners hug lane 1 on main track
+      const pStep = 0.003;
+      const finishProg = getFinishProgress(1, cfg); // ~0.212
+
+      // Segment 1: finish line → right curve → top straight (progress 0.212 → 0.712)
+      for (let p = finishProg; p <= 0.712; p += pStep) {
+        this.scLapPath.push(getTrackPoint(scTrackLane, Math.min(p, 0.712), cfg));
+      }
+      // Segment 2: bypass ellipse (replaces left curve, progress 0.712 → 1.0)
+      for (const cp of centerPts) {
+        this.scLapPath.push({ x: cp.x, y: cp.y });
+      }
+      // Segment 3: bottom straight back to finish (progress 0.0 → 0.212)
+      for (let p = pStep; p <= finishProg; p += pStep) {
+        this.scLapPath.push(getTrackPoint(scTrackLane, Math.min(p, finishProg), cfg));
+      }
+      // Close the loop: ensure last point matches first point exactly
+      this.scLapPath.push({ ...this.scLapPath[0] });
+
+      // Compute cumulative pixel arc lengths
+      for (let i = 1; i < this.scLapPath.length; i++) {
+        const dx = this.scLapPath[i].x - this.scLapPath[i-1].x;
+        const dy = this.scLapPath[i].y - this.scLapPath[i-1].y;
+        this.scLapArcLen.push(this.scLapArcLen[i-1] + Math.sqrt(dx*dx + dy*dy));
+      }
+      this.scLapTotalLen = this.scLapArcLen[this.scLapArcLen.length - 1] || 1;
+
+      // Store water pit info for jump detection
+      const spur = buildSpurPath(cfg);
+      spur.waterPit = { x: wpDrawX, y: wpY, size: pitSize };
+      spur.points = centerPts.map(cp => ({ x: cp.x, y: cp.y }));
+      this.spurPath = spur;
+
+      // ── Regular barriers ──
+      // H1 (0.30, right curve): perpendicular to curve
+      // H2 (0.53), H3 (0.65): vertical on top straight
+      // H5 (0.12): vertical on bottom straight
+      // Draw barriers perpendicular to track at their position
+      // H2 (0.499, right curve), H3 (0.700, top straight), H5 (0.099, bottom straight)
+      const otherBarriers = [0.499, 0.700, 0.099];
+      for (const prog of otherBarriers) {
+        const ptMid = getTrackPoint(2.5, prog, cfg);
+        const ptBefore = getTrackPoint(2.5, prog - 0.005, cfg);
+        const ptAfter = getTrackPoint(2.5, prog + 0.005, cfg);
+        const tx = ptAfter.x - ptBefore.x;
+        const ty = ptAfter.y - ptBefore.y;
+        const tlen = Math.sqrt(tx * tx + ty * ty) || 1;
+        const perpX = -ty / tlen;
+        const perpY = tx / tlen;
+        const halfBarrier = cfg.laneWidth * 2;
+
+        barrierGfx.lineStyle(4, 0x663300, 0.95);
+        barrierGfx.lineBetween(
+          ptMid.x - perpX * halfBarrier, ptMid.y - perpY * halfBarrier,
+          ptMid.x + perpX * halfBarrier, ptMid.y + perpY * halfBarrier,
+        );
+        barrierGfx.lineStyle(2, 0xffffff, 0.8);
+        barrierGfx.lineBetween(
+          ptMid.x - perpX * halfBarrier * 0.4, ptMid.y - perpY * halfBarrier * 0.4,
+          ptMid.x + perpX * halfBarrier * 0.4, ptMid.y + perpY * halfBarrier * 0.4,
+        );
+        barrierGfx.fillStyle(0x444444, 0.9);
+        barrierGfx.fillCircle(ptMid.x - perpX * halfBarrier, ptMid.y - perpY * halfBarrier, 3);
+        barrierGfx.fillCircle(ptMid.x + perpX * halfBarrier, ptMid.y + perpY * halfBarrier, 3);
+      }
+
+      // H1 on right curve — perpendicular to the curve (tangent direction)
+      // Fades in after first lap, skipped on first pass
+      {
+        const prog = 0.299;
+        const ptMid = getTrackPoint(2.5, prog, cfg); // center of barrier
+        // Get tangent by sampling adjacent points
+        const ptBefore = getTrackPoint(2.5, prog - 0.005, cfg);
+        const ptAfter = getTrackPoint(2.5, prog + 0.005, cfg);
+        const tx = ptAfter.x - ptBefore.x;
+        const ty = ptAfter.y - ptBefore.y;
+        const tlen = Math.sqrt(tx * tx + ty * ty) || 1;
+        // Perpendicular to tangent = the barrier direction
+        const perpX = -ty / tlen;
+        const perpY = tx / tlen;
+        const halfBarrier = cfg.laneWidth * 2; // spans ~4 lanes
+
+        // Store H1 as a Phaser graphics object so we can fade it in
+        const h1Gfx = this.add.graphics().setDepth(4).setAlpha(0);
+        h1Gfx.lineStyle(4, 0x663300, 0.95);
+        h1Gfx.lineBetween(
+          ptMid.x - perpX * halfBarrier, ptMid.y - perpY * halfBarrier,
+          ptMid.x + perpX * halfBarrier, ptMid.y + perpY * halfBarrier,
+        );
+        h1Gfx.lineStyle(2, 0xffffff, 0.8);
+        h1Gfx.lineBetween(
+          ptMid.x - perpX * halfBarrier * 0.4, ptMid.y - perpY * halfBarrier * 0.4,
+          ptMid.x + perpX * halfBarrier * 0.4, ptMid.y + perpY * halfBarrier * 0.4,
+        );
+        h1Gfx.fillStyle(0x444444, 0.9);
+        h1Gfx.fillCircle(ptMid.x - perpX * halfBarrier, ptMid.y - perpY * halfBarrier, 3);
+        h1Gfx.fillCircle(ptMid.x + perpX * halfBarrier, ptMid.y + perpY * halfBarrier, 3);
+
+        // Store reference for fade-in during race
+        (this as any)._h1Gfx = h1Gfx;
+        (this as any)._h1FadedIn = false;
+      }
+    }
+
     // ── Stadium name (if set) ──
     if (this.stadiumConfig?.stadiumName) {
       this.add.text(W / 2, 16, this.stadiumConfig.stadiumName, {
@@ -300,11 +566,19 @@ export class RaceScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5).setDepth(2);
 
     // Splits display — below the timer
-    this.splitsText = this.add.text(cx, cy + 45, '', {
+    this.splitsText = this.add.text(
+      this.eventType === '2000mSC' ? cx - 210 : cx, cy + 45, '', {
       fontSize: '22px', fontFamily: 'Arial Black, sans-serif',
       color: '#fff', stroke: '#000', strokeThickness: 4,
-      align: 'center', lineSpacing: 6,
-    }).setOrigin(0.5, 0).setDepth(2);
+      align: 'left', lineSpacing: 6,
+    }).setOrigin(this.eventType === '2000mSC' ? 0 : 0.5, 0).setDepth(2);
+    if (this.eventType === '2000mSC') {
+      (this as any)._splitsText2 = this.add.text(cx + 20, cy + 45, '', {
+        fontSize: '22px', fontFamily: 'Arial Black, sans-serif',
+        color: '#fff', stroke: '#000', strokeThickness: 4,
+        align: 'left', lineSpacing: 6,
+      }).setOrigin(0, 0).setDepth(2);
+    }
 
     this.playerSplits = [];
     this.lastSplitDistance = 0;
@@ -633,6 +907,7 @@ export class RaceScene extends Phaser.Scene {
     x: number, y: number,
     lane: number, phase: number,
     isRunning: boolean, isFinished: boolean, isPlayer: boolean,
+    jumping: boolean = false,
   ) {
     gfx.clear();
     // Determine appearance: player customization > challenge laneMetadata > default bot
@@ -657,10 +932,11 @@ export class RaceScene extends Phaser.Scene {
     const drawOutlines = this.playbackSpeed <= 1 || isPlayer;
 
     // Animation: arms and legs swing with sin/cos of phase
-    const legSwing = isRunning ? Math.sin(phase) * 0.5 : 0;
-    const armSwing = isRunning ? Math.sin(phase + Math.PI) * 0.4 : 0;
-    const bodyBob = isRunning ? Math.abs(Math.sin(phase)) * 1.5 : 0;
-    const lean = isRunning ? 2 * s : 0;
+    // Jumping pose: big lead leg extension, trail leg tucked, strong lean, arms up
+    const legSwing = jumping ? 0.6 : isRunning ? Math.sin(phase) * 0.5 : 0;
+    const armSwing = jumping ? -0.5 : isRunning ? Math.sin(phase + Math.PI) * 0.4 : 0;
+    const bodyBob = jumping ? -1 : isRunning ? Math.abs(Math.sin(phase)) * 1.5 : 0;
+    const lean = jumping ? 3 * s : isRunning ? 2 * s : 0;
 
     // (x, y) = foot/ground position on the track lane center
     // Build body upward from feet
@@ -747,6 +1023,12 @@ export class RaceScene extends Phaser.Scene {
       lHandY = shoulderY - 12 * s;
       rHandX = cx + 10 * s;
       rHandY = shoulderY - 12 * s;
+    } else if (jumping) {
+      // Hurdle jump: one arm forward, one back — classic hurdler form
+      lHandX = cx + 8 * s; // lead arm forward
+      lHandY = shoulderY - 4 * s;
+      rHandX = cx - 4 * s; // trail arm tucked back
+      rHandY = shoulderY - 10 * s;
     } else {
       // Normal running/standing arms
       lHandX = cx - 8 * s + armSwing * 8 * s;
@@ -838,7 +1120,6 @@ export class RaceScene extends Phaser.Scene {
     // Track player's 200m splits
     const playerData = frame.runners.find(r => r.lane === this.playerLane);
     if (playerData) {
-      // Check if player crossed a 200m split boundary
       const splitInterval = 200;
       const nextSplit = this.lastSplitDistance + splitInterval;
       if (playerData.distance >= nextSplit && this.lastSplitDistance < this.raceDistance) {
@@ -849,11 +1130,24 @@ export class RaceScene extends Phaser.Scene {
         this.lastSplitDistance = nextSplit;
 
         // Update splits display
-        let splitsStr = '';
-        for (const sp of this.playerSplits) {
-          splitsStr += `${sp.distance}m: ${sp.time}\n`;
+        if (this.eventType === '2000mSC') {
+          // Column 1: 200m-1000m, Column 2: 1200m-2000m
+          const col1: string[] = [];
+          const col2: string[] = [];
+          for (const sp of this.playerSplits) {
+            const line = `${sp.distance}m: ${sp.time}`;
+            if (sp.distance <= 1000) col1.push(line); else col2.push(line);
+          }
+          this.splitsText.setText(col1.join('\n'));
+          const splitsText2 = (this as any)._splitsText2 as Phaser.GameObjects.Text;
+          if (splitsText2) splitsText2.setText(col2.join('\n'));
+        } else {
+          let splitsStr = '';
+          for (const sp of this.playerSplits) {
+            splitsStr += `${sp.distance}m: ${sp.time}\n`;
+          }
+          this.splitsText.setText(splitsStr);
         }
-        this.splitsText.setText(splitsStr);
       }
     }
 
@@ -913,7 +1207,7 @@ export class RaceScene extends Phaser.Scene {
 
       if (rd.finished) {
         // For 800m, runners finish in lane 1 — use lane 1 for all post-finish movement
-        const finishLane = this.eventType === '800m' ? 1 : rd.lane;
+        const finishLane = (this.eventType === '800m' || this.eventType === '2000mSC') ? 1 : rd.lane;
 
         if (rv.finishedTick < 0) {
           rv.finishedTick = this.currentFrame;
@@ -951,10 +1245,59 @@ export class RaceScene extends Phaser.Scene {
         fx = rv.prevPos.x;
         fy = rv.prevPos.y;
       } else {
-        const effectiveLane = this.eventType === '800m'
-          ? getEffectiveLane800(rd.lane, rd.distance) : rd.lane;
-        const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
-        const pos = getTrackPoint(effectiveLane, trackProg, cfg);
+        let pos: Point;
+        const totalR = this.frames[0]?.runners.length || (this.eventType === '2000mSC' ? 12 : 8);
+
+        if (this.eventType === '2000mSC' && this.scLapPath.length > 1) {
+          // Lap path lookup
+          const lapFrac = (rd.distance % 400) / 400;
+          const targetDist = lapFrac * this.scLapTotalLen;
+          let lo = 0, hi = this.scLapArcLen.length - 1;
+          while (hi - lo > 1) {
+            const mid2 = (lo + hi) >> 1;
+            if (this.scLapArcLen[mid2] <= targetDist) lo = mid2; else hi = mid2;
+          }
+          const segLen = this.scLapArcLen[hi] - this.scLapArcLen[lo];
+          const segFrac = segLen > 0.01 ? (targetDist - this.scLapArcLen[lo]) / segLen : 0;
+          const p0 = this.scLapPath[lo];
+          const p1 = this.scLapPath[Math.min(hi, this.scLapPath.length - 1)];
+          const px = p0.x + (p1.x - p0.x) * segFrac;
+          const py = p0.y + (p1.y - p0.y) * segFrac;
+
+          // Perpendicular spread — keep all runners between lane 1 and lane 3
+          const prevPt = this.scLapPath[Math.max(0, lo - 1)];
+          const nextPt = this.scLapPath[Math.min(hi + 1, this.scLapPath.length - 1)];
+          const tdx = nextPt.x - prevPt.x;
+          const tdy = nextPt.y - prevPt.y;
+          const tlen = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
+          const nx = -tdy / tlen;
+          const ny = tdx / tlen;
+
+          const runnerFrac = (rd.lane - 1) / Math.max(1, totalR - 1);
+          // Pack in lane 1-2 — tight spread, prioritize inside
+          const spread = -cfg.laneWidth * 0.3 + runnerFrac * cfg.laneWidth * 0.8;
+          pos = { x: px + nx * spread, y: py + ny * spread };
+
+          // Natural cut-in at race start: first 30m, blend from starting spread to pack
+          if (rd.distance < 30) {
+            const startLane = 1 + ((rd.lane - 1) / Math.max(1, totalR - 1)) * 5;
+            const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
+            const spreadPos = getTrackPoint(startLane, trackProg, cfg);
+            const blend = rd.distance / 30;
+            const eased = blend * blend; // ease-in so they accelerate into the merge
+            pos = {
+              x: spreadPos.x + (pos.x - spreadPos.x) * eased,
+              y: spreadPos.y + (pos.y - spreadPos.y) * eased,
+            };
+          }
+        } else if (this.eventType === '800m') {
+          const effectiveLane = getEffectiveLane800(rd.lane, rd.distance);
+          const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
+          pos = getTrackPoint(effectiveLane, trackProg, cfg);
+        } else {
+          const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
+          pos = getTrackPoint(rd.lane, trackProg, cfg);
+        }
 
         const lf = 0.55;
         const pdx = pos.x - rv.prevPos.x;
@@ -973,11 +1316,62 @@ export class RaceScene extends Phaser.Scene {
       rv.trail.setDepth(depthVal - 1);
       rv.boostGlow.setDepth(depthVal + 1);
 
-      this.drawRunner(rv.gfx, fx, fy, rd.lane, rv.animPhase, isRunning || isWalking, rd.finished && !isWalking, rv.isPlayer);
+      // Steeplechase hurdle jump — check visual proximity to barrier positions
+      let jumpOffset = 0;
+      let isJumping = false;
+      if (this.eventType === '2000mSC' && !rd.finished) {
+        // Fade in H1 after first right curve completes (~200m into the race)
+        const h1Gfx = (this as any)._h1Gfx as Phaser.GameObjects.Graphics | null;
+        if (h1Gfx && !(this as any)._h1FadedIn) {
+          // Use the lead runner's distance to trigger fade
+          const leadDist = Math.max(...frame.runners.map(r => r.distance));
+          if (leadDist > 200) {
+            (this as any)._h1FadedIn = true;
+            this.tweens.add({ targets: h1Gfx, alpha: 1, duration: 800, ease: 'Sine.easeIn' });
+          }
+        }
+
+        // Check distance from runner's visual position to each barrier's visual position
+        // H1 (0.30) is skipped on the first lap (distance < 400)
+        const barrierProgs = [0.299, 0.499, 0.700, 0.099];
+        const jumpPx = 30;
+        const maxH = 10;
+        for (const bp of barrierProgs) {
+          // Skip H1 on first lap
+          if (bp === 0.299 && rd.distance < 400) continue;
+
+          const bpt1 = getTrackPoint(1, bp, cfg);
+          const bpt4 = getTrackPoint(4, bp, cfg);
+          const bx = (bpt1.x + bpt4.x) / 2;
+          const by = (bpt1.y + bpt4.y) / 2;
+          const dx = fx - bx;
+          const dy = fy - by;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < jumpPx) {
+            isJumping = true;
+            jumpOffset = (1 - (dist / jumpPx)) * maxH;
+            break;
+          }
+        }
+        // Water jump: check proximity to water pit center
+        if (!isJumping && this.spurPath) {
+          const wp = this.spurPath.waterPit;
+          const dx = fx - wp.x;
+          const dy = fy - wp.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const wpJumpPx = 40;
+          if (dist < wpJumpPx) {
+            isJumping = true;
+            jumpOffset = (1 - (dist / wpJumpPx)) * 14;
+          }
+        }
+      }
+
+      this.drawRunner(rv.gfx, fx, fy - jumpOffset, rd.lane, rv.animPhase, isRunning || isWalking, rd.finished && !isWalking, rv.isPlayer, isJumping);
 
       const runnerHeight = (11 + 12 + 12) * (rv.isPlayer ? 1.0 : 0.85);
-      rv.label.setPosition(fx, fy - runnerHeight - 6);
-      rv.boostGlow.setPosition(fx, fy - runnerHeight * 0.5);
+      rv.label.setPosition(fx, fy - jumpOffset - runnerHeight - 6);
+      rv.boostGlow.setPosition(fx, fy - jumpOffset - runnerHeight * 0.5);
 
       // Purple flashing triangle above player's runner
       if (rv.indicator) {
@@ -1000,7 +1394,9 @@ export class RaceScene extends Phaser.Scene {
       // Speed trail
       rv.trail.clear();
       if (rv.isPlayer && rd.speed > 8 && !rd.finished) {
-        const el = this.eventType === '800m' ? getEffectiveLane800(rd.lane, rd.distance) : rd.lane;
+        const el = this.eventType === '2000mSC'
+          ? getEffectiveLaneSC(rd.lane - 1, rd.distance, this.frames[0]?.runners.length || 12)
+          : this.eventType === '800m' ? getEffectiveLane800(rd.lane, rd.distance) : rd.lane;
         const tp = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
         const alpha = Math.min(0.4, (rd.speed - 8) / 8);
         for (let i = 1; i <= 3; i++) {

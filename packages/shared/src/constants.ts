@@ -3,10 +3,11 @@ import { Rarity, EventType, PackType, AthleteCardTemplate, BoostCardTemplate, Bo
 // ============================================================
 // Race Event Definitions
 // ============================================================
-export const RACE_EVENTS: Record<EventType, { distance: number; laps: number; staggered: boolean; laneBreakAfterMeters?: number }> = {
+export const RACE_EVENTS: Record<EventType, { distance: number; laps: number; staggered: boolean; laneBreakAfterMeters?: number; barriers?: number }> = {
   '200m': { distance: 200, laps: 0.5, staggered: true },
   '400m': { distance: 400, laps: 1, staggered: true },
   '800m': { distance: 800, laps: 2, staggered: true, laneBreakAfterMeters: 115 },
+  '2000mSC': { distance: 2000, laps: 5, staggered: false, barriers: 5 },
 };
 
 // ============================================================
@@ -199,6 +200,10 @@ const FLAVOR_TEXTS_800 = [
   'Tactical genius.', 'Kick like thunder.', 'Two laps of pure grit.',
   'The middle-distance king.', 'Runs with heart.', 'Lethal closing speed.',
 ];
+const FLAVOR_TEXTS_2000SC = [
+  'Glides over barriers.', 'Born for the water jump.', 'Fearless over every hurdle.',
+  'The ultimate steepler.', 'Five laps of controlled chaos.', 'Master of the barriers.',
+];
 
 function seededRandom(seed: number): () => number {
   let s = seed;
@@ -212,18 +217,18 @@ function generateAthleteTemplates(): AthleteCardTemplate[] {
   const templates: AthleteCardTemplate[] = [];
   const rand = seededRandom(42);
   const rarities: Rarity[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'superstar', 'legend'];
-  const events: EventType[] = ['200m', '400m', '800m'];
-  const flavorByEvent = { '200m': FLAVOR_TEXTS_200, '400m': FLAVOR_TEXTS_400, '800m': FLAVOR_TEXTS_800 };
+  const events: EventType[] = ['200m', '400m', '800m', '2000mSC'];
+  const flavorByEvent: Record<string, string[]> = { '200m': FLAVOR_TEXTS_200, '400m': FLAVOR_TEXTS_400, '800m': FLAVOR_TEXTS_800, '2000mSC': FLAVOR_TEXTS_2000SC };
 
   let id = 1;
   // Generate cards for each rarity and event
   for (const rarity of rarities) {
-    const count = rarity === 'legend' ? 3 : rarity === 'superstar' ? 3 : rarity === 'diamond' ? 3 : rarity === 'platinum' ? 5 : rarity === 'gold' ? 8 : rarity === 'silver' ? 10 : 12;
+    const count = rarity === 'legend' ? 4 : rarity === 'superstar' ? 4 : rarity === 'diamond' ? 4 : rarity === 'platinum' ? 6 : rarity === 'gold' ? 10 : rarity === 'silver' ? 12 : 14;
     for (let i = 0; i < count; i++) {
       // Guarantee one of each event for top tiers
       let event: EventType;
-      if ((rarity === 'legend' || rarity === 'superstar' || rarity === 'diamond') && i < 3) {
-        event = events[i]; // i=0 → 200m, i=1 → 400m, i=2 → 800m
+      if ((rarity === 'legend' || rarity === 'superstar' || rarity === 'diamond') && i < 4) {
+        event = events[i]; // i=0 → 200m, i=1 → 400m, i=2 → 800m, i=3 → 2000mSC
       } else {
         event = events[Math.floor(rand() * events.length)];
       }
@@ -235,6 +240,7 @@ function generateAthleteTemplates(): AthleteCardTemplate[] {
       if (event === '200m') { speed = Math.min(99, speed + 10); acceleration = Math.min(99, acceleration + 8); }
       if (event === '400m') { speed = Math.min(99, speed + 5); stamina = Math.min(99, stamina + 5); }
       if (event === '800m') { stamina = Math.min(99, stamina + 10); form = Math.min(99, form + 8); }
+      if (event === '2000mSC') { stamina = Math.min(99, stamina + 12); form = Math.min(99, form + 10); }
 
       const overall = calculateOverallRating({ speed, stamina, acceleration, form });
       const flavors = flavorByEvent[event];

@@ -52,7 +52,7 @@ export function registerChallengeRoutes(app: FastifyInstance) {
     if (invitees.length > 7) {
       return reply.status(400).send({ error: 'Maximum 7 friends (8 total players)' });
     }
-    if (!['200m', '400m', '800m'].includes(eventType)) {
+    if (!['200m', '400m', '800m', '2000mSC'].includes(eventType)) {
       return reply.status(400).send({ error: 'Invalid event type' });
     }
 

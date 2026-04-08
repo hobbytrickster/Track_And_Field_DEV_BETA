@@ -19,7 +19,7 @@ export function registerRaceRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'eventType and userAthleteId are required' });
     }
 
-    if (!['200m', '400m', '800m'].includes(eventType)) {
+    if (!['200m', '400m', '800m', '2000mSC'].includes(eventType)) {
       return reply.status(400).send({ error: 'Invalid event type' });
     }
 
@@ -51,6 +51,7 @@ export function registerRaceRoutes(app: FastifyInstance) {
       '200m': records.filter(r => r.eventType === '200m').sort((a, b) => a.finishTimeMs - b.finishTimeMs).slice(0, 3),
       '400m': records.filter(r => r.eventType === '400m').sort((a, b) => a.finishTimeMs - b.finishTimeMs).slice(0, 3),
       '800m': records.filter(r => r.eventType === '800m').sort((a, b) => a.finishTimeMs - b.finishTimeMs).slice(0, 3),
+      '2000mSC': records.filter(r => r.eventType === '2000mSC').sort((a, b) => a.finishTimeMs - b.finishTimeMs).slice(0, 3),
     };
   });
 

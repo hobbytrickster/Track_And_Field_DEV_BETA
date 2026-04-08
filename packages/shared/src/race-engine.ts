@@ -39,6 +39,7 @@ function accelerationCurve(tickPct: number, accelStat: number, eventType: EventT
   // How quickly they reach full speed (in race-fraction)
   const rampDuration = eventType === '200m' ? 0.04 - (accelStat / 100) * 0.025
     : eventType === '400m' ? 0.03 - (accelStat / 100) * 0.018
+    : eventType === '2000mSC' ? 0.008 - (accelStat / 100) * 0.004 // steeplechase: quick settle into pace
     : 0.012 - (accelStat / 100) * 0.006; // 800m: fast ramp, they hit pace quickly
 
   if (tickPct >= rampDuration) return 1.0;
@@ -51,6 +52,9 @@ function staminaCurve(tickPct: number, staminaStat: number, eventType: EventType
   if (eventType === '800m') {
     return staminaCurve800(tickPct, staminaStat, splitType || 'basic');
   }
+  if (eventType === '2000mSC') {
+    return staminaCurve2000SC(tickPct, staminaStat);
+  }
   // Longer races punish low stamina more
   const eventMultiplier = eventType === '200m' ? 0.3 : 0.7;
   const decayStart = 0.35 + (staminaStat / 100) * 0.25; // 0.35 to 0.60
@@ -60,6 +64,36 @@ function staminaCurve(tickPct: number, staminaStat: number, eventType: EventType
   const decayProgress = (tickPct - decayStart) / (1 - decayStart);
   const maxDropoff = ((100 - staminaStat) / 100) * 0.20 * eventMultiplier;
   return 1.0 - maxDropoff * decayProgress * decayProgress; // quadratic decay
+}
+
+/**
+ * 2000m Steeplechase stamina curve.
+ * 5-lap race with barriers every lap. Stamina management is crucial.
+ * Runners settle into rhythm laps 1-3, fatigue hits lap 4, kick on lap 5.
+ */
+function staminaCurve2000SC(tickPct: number, staminaStat: number): number {
+  // Phase 1: Settle in (0-20% = lap 1)
+  if (tickPct < 0.20) return 1.0;
+
+  // Phase 2: Rhythm laps (20-60% = laps 2-3)
+  if (tickPct < 0.60) {
+    const fatigue = ((100 - staminaStat) / 100) * 0.04 * ((tickPct - 0.20) / 0.40);
+    return 1.0 - fatigue;
+  }
+
+  // Phase 3: Fatigue sets in (60-80% = lap 4)
+  if (tickPct < 0.80) {
+    const baseFatigue = ((100 - staminaStat) / 100) * 0.04;
+    const extraFatigue = ((100 - staminaStat) / 100) * 0.10 * ((tickPct - 0.60) / 0.20);
+    return 1.0 - baseFatigue - extraFatigue;
+  }
+
+  // Phase 4: Final lap kick or fade (80-100%)
+  const baseFatigue = ((100 - staminaStat) / 100) * 0.04;
+  const midFatigue = ((100 - staminaStat) / 100) * 0.10;
+  const kickBonus = (staminaStat / 100) * 0.03 * ((tickPct - 0.80) / 0.20);
+  const fadePenalty = ((100 - staminaStat) / 100) * 0.06 * ((tickPct - 0.80) / 0.20);
+  return 1.0 - baseFatigue - midFatigue + kickBonus - fadePenalty;
 }
 
 /**
@@ -297,7 +331,7 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
   const tickRate = SIM.tickRate;
 
   // Estimate max ticks — use slowest possible speed for the event
-  const slowestSpeed = eventType === '800m' ? 5.0 : eventType === '400m' ? 6.0 : SIM.minSpeedMs;
+  const slowestSpeed = eventType === '2000mSC' ? 4.0 : eventType === '800m' ? 5.0 : eventType === '400m' ? 6.0 : SIM.minSpeedMs;
   const maxTicks = Math.ceil((raceDistance / slowestSpeed) * tickRate * 1.5);
 
   // Initialize runners
@@ -407,43 +441,34 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
       let speedPenalty = 0, staminaPenalty = 0, accelPenalty = 0, formPenalty = 0;
 
       if (specialty !== eventType) {
-        const dist = (a: string, b: string) => {
-          const order = { '200m': 0, '400m': 1, '800m': 2 } as Record<string, number>;
-          return Math.abs((order[a] ?? 0) - (order[b] ?? 0));
-        };
-        const gap = dist(specialty, eventType);
+        const order = { '200m': 0, '400m': 1, '800m': 2, '2000mSC': 3 } as Record<string, number>;
+        const gap = Math.abs((order[specialty] ?? 0) - (order[eventType] ?? 0));
 
         if (specialty === '200m' && eventType === '800m') {
-          // Sprinter in 800m — catastrophic, completely wrong physiology
-          staminaPenalty = 55;
-          formPenalty = 45;
-          speedPenalty = 20;
-          accelPenalty = 10;
+          staminaPenalty = 55; formPenalty = 45; speedPenalty = 20; accelPenalty = 10;
         } else if (specialty === '800m' && eventType === '200m') {
-          // Distance runner in 200m — no fast-twitch, no explosiveness
-          speedPenalty = 50;
-          accelPenalty = 55;
-          formPenalty = 15;
+          speedPenalty = 50; accelPenalty = 55; formPenalty = 15;
         } else if (specialty === '200m' && eventType === '400m') {
-          // Sprinter in 400m — fades badly, wrong energy system
-          staminaPenalty = 40;
-          formPenalty = 25;
-          speedPenalty = 10;
+          staminaPenalty = 40; formPenalty = 25; speedPenalty = 10;
         } else if (specialty === '400m' && eventType === '200m') {
-          // 400m runner in 200m — lacks pure sprint ability
-          accelPenalty = 35;
-          speedPenalty = 30;
-          formPenalty = 10;
+          accelPenalty = 35; speedPenalty = 30; formPenalty = 10;
         } else if (specialty === '400m' && eventType === '800m') {
-          // 400m runner in 800m — can't sustain for 2 laps
-          staminaPenalty = 45;
-          formPenalty = 30;
-          speedPenalty = 10;
+          staminaPenalty = 45; formPenalty = 30; speedPenalty = 10;
         } else if (specialty === '800m' && eventType === '400m') {
-          // 800m runner in 400m — way too slow, no raw speed
-          speedPenalty = 40;
-          accelPenalty = 35;
-          formPenalty = 10;
+          speedPenalty = 40; accelPenalty = 35; formPenalty = 10;
+        // 2000mSC penalties — steeplechase specialists need endurance + barrier technique
+        } else if (specialty === '200m' && eventType === '2000mSC') {
+          staminaPenalty = 60; formPenalty = 50; speedPenalty = 25; accelPenalty = 15;
+        } else if (specialty === '400m' && eventType === '2000mSC') {
+          staminaPenalty = 50; formPenalty = 40; speedPenalty = 15;
+        } else if (specialty === '800m' && eventType === '2000mSC') {
+          staminaPenalty = 20; formPenalty = 25; // 800m runners can adapt somewhat
+        } else if (specialty === '2000mSC' && eventType === '200m') {
+          speedPenalty = 55; accelPenalty = 60; formPenalty = 20;
+        } else if (specialty === '2000mSC' && eventType === '400m') {
+          speedPenalty = 45; accelPenalty = 40; formPenalty = 15;
+        } else if (specialty === '2000mSC' && eventType === '800m') {
+          speedPenalty = 20; accelPenalty = 15; // steepler in 800m is decent
         }
       }
 
@@ -461,7 +486,10 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
       // Graduated speed by tier — Super Stars are the fastest, lower tiers nerfed slightly
       // OVR ranges: bronze 15-35, silver 36-50, gold 51-65, platinum 66-78, diamond 79-90, superstar 96-100
       let minSpeed: number, maxSpeed: number;
-      if (eventType === '800m') {
+      if (eventType === '2000mSC') {
+        minSpeed = 4.8;
+        maxSpeed = 6.8; // ~4:54 to ~6:57 for 2000m
+      } else if (eventType === '800m') {
         minSpeed = 5.6;
         maxSpeed = 7.8;
       } else if (eventType === '400m') {
@@ -508,11 +536,34 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
         * (boostResult.accelMult > 1 && runnerPct < 0.15 ? boostResult.accelMult : 1)
         * (1 - intimidateDebuff);
 
+      // Steeplechase barrier slowdown — 5 barriers per lap at fixed positions
+      // Higher form stat = better technique = less speed loss
+      if (eventType === '2000mSC') {
+        const lapLength = 400;
+        // H1=right curve, H2=top straight R, H3=top straight L, H4=water jump (left curve), H5=bottom straight
+        const barrierPositions = [35, 115, 195, 243, 355]; // ~80m apart, H1 at 35m, water at 243m
+        const distInLap = state.distance % lapLength;
+        for (const bp of barrierPositions) {
+          // H1 (35m) is skipped on the first lap
+          if (bp === 35 && state.distance < lapLength) continue;
+          const prevDistInLap = (state.distance - (state.speed / tickRate)) % lapLength;
+          if ((prevDistInLap < bp && distInLap >= bp) || (prevDistInLap > 370 && distInLap < 30 && bp < 30)) {
+            const isWaterJump = bp === 243;
+            const formFactor2 = effectiveStats.form / 100;
+            const maxSlow = isWaterJump ? 0.20 : 0.10;
+            const minSlow = isWaterJump ? 0.08 : 0.03;
+            const slowdown = maxSlow - formFactor2 * (maxSlow - minSlow);
+            currentSpeed *= (1 - slowdown);
+            break;
+          }
+        }
+      }
+
       // Hard speed caps per event — prevents boosts from breaking target times
       // 200m target: fastest ~19.5s → max avg ~10.25 m/s → cap at 10.4
       // 400m target: fastest ~43s → max avg ~9.30 m/s → cap at 9.5
       // 800m target: fastest ~1:39 → max avg ~8.08 m/s → cap at 8.3
-      const hardCap = eventType === '800m' ? 8.05 : eventType === '400m' ? 9.5 : 10.4;
+      const hardCap = eventType === '2000mSC' ? 7.2 : eventType === '800m' ? 8.05 : eventType === '400m' ? 9.5 : 10.4;
       currentSpeed = Math.min(currentSpeed, hardCap);
 
       // Update position

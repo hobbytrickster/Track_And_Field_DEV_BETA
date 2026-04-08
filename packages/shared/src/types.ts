@@ -19,7 +19,7 @@ export interface AuthPayload {
 }
 
 // --- Athlete Cards ---
-export type EventType = '200m' | '400m' | '800m';
+export type EventType = '200m' | '400m' | '800m' | '2000mSC';
 export type Rarity = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'superstar' | 'legend';
 
 /** 800m pacing style — determines how the runner distributes effort across laps */

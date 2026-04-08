@@ -134,7 +134,7 @@ export function Collection({ onBack, onCustomize }: Props) {
           }}>
             {multiSelect ? `CANCEL (${selectedIds.size})` : 'MULTI-SELECT'}
           </button>
-          {['all', '200m', '400m', '800m'].map(f => (
+          {['all', '200m', '400m', '800m', '2000mSC'].map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               background: filter === f ? '#FFD700' : '#333',
               color: filter === f ? '#000' : '#888',

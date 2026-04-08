@@ -73,7 +73,7 @@ export function RaceSetup({ onStartRace, onBack, lockedEventType }: Props) {
               }}>{lockedEventType}</div>
             ) : (
               <div style={{ display: 'flex', gap: 12 }}>
-                {(['200m', '400m', '800m'] as EventType[]).map(e => (
+                {(['200m', '400m', '800m', '2000mSC'] as EventType[]).map(e => (
                   <button key={e} onClick={() => setEventType(e)} style={{
                     padding: '16px 44px', fontSize: 22, fontWeight: 'bold',
                     background: eventType === e ? 'linear-gradient(135deg, #FFD700, #ff8800)' : '#222',

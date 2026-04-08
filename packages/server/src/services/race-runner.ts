@@ -38,6 +38,11 @@ function generateBotRunner(lane: number, targetRating: number, eventType: EventT
     stamina = Math.min(90, stamina + 8); form = Math.min(90, form + 5);
     speed = Math.min(75, speed); // cap speed lower — they're not sprinters
   }
+  if (eventType === '2000mSC') {
+    // Steeplechase bots need high stamina, form (for barriers), moderate speed
+    stamina = Math.min(90, stamina + 10); form = Math.min(90, form + 8);
+    speed = Math.min(70, speed);
+  }
 
   const botBoosts: BoostCardTemplate[] = [];
   if (Math.random() < 0.4) {
@@ -105,8 +110,9 @@ export function runRace(request: RaceRequest): {
     }
   }
 
-  // Random lane assignment for the player
-  const playerLane = Math.floor(Math.random() * 8) + 1;
+  // Steeplechase has 12 runners, other events have 8
+  const totalRunners = eventType === '2000mSC' ? 12 : 8;
+  const playerLane = Math.floor(Math.random() * totalRunners) + 1;
 
   const playerRunner: SimRunnerInput = {
     lane: playerLane,
@@ -125,7 +131,7 @@ export function runRace(request: RaceRequest): {
   };
 
   const runners: SimRunnerInput[] = [];
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= totalRunners; i++) {
     if (i === playerLane) {
       runners.push(playerRunner);
     } else {
@@ -203,7 +209,7 @@ export function runRace(request: RaceRequest): {
     athleteRow2.raceStats.totalRaces++;
     if (pos === 1) athleteRow2.raceStats.wins++;
     if (pos === 2 || pos === 3) athleteRow2.raceStats.podiums++;
-    if (pos === 8) athleteRow2.raceStats.lastPlaces++;
+    if (pos === totalRunners) athleteRow2.raceStats.lastPlaces++;
     const prevBest = athleteRow2.raceStats.bestTimes[eventType];
     if (!prevBest || playerResult.finishTimeMs < prevBest) {
       athleteRow2.raceStats.bestTimes[eventType] = playerResult.finishTimeMs;
@@ -378,7 +384,7 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
       ath.raceStats.totalRaces++;
       if (pos === 1) ath.raceStats.wins++;
       if (pos === 2 || pos === 3) ath.raceStats.podiums++;
-      if (pos === 8) ath.raceStats.lastPlaces++;
+      if (pos >= 8) ath.raceStats.lastPlaces++; // last place in 8 or 12 runner fields
       const prev = ath.raceStats.bestTimes[eventType];
       if (!prev || result.finishTimeMs < prev) ath.raceStats.bestTimes[eventType] = result.finishTimeMs;
     }
