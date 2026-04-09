@@ -488,7 +488,7 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
       let minSpeed: number, maxSpeed: number;
       if (eventType === '2000mSC') {
         minSpeed = 4.8;
-        maxSpeed = 6.8; // ~4:54 to ~6:57 for 2000m
+        maxSpeed = 6.65; // fastest ~5:05, slowest ~6:55 for 2000m
       } else if (eventType === '800m') {
         minSpeed = 5.6;
         maxSpeed = 7.8;
@@ -563,7 +563,7 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
       // 200m target: fastest ~19.5s → max avg ~10.25 m/s → cap at 10.4
       // 400m target: fastest ~43s → max avg ~9.30 m/s → cap at 9.5
       // 800m target: fastest ~1:39 → max avg ~8.08 m/s → cap at 8.3
-      const hardCap = eventType === '2000mSC' ? 7.2 : eventType === '800m' ? 8.05 : eventType === '400m' ? 9.5 : 10.4;
+      const hardCap = eventType === '2000mSC' ? 6.9 : eventType === '800m' ? 8.05 : eventType === '400m' ? 9.5 : 10.4;
       currentSpeed = Math.min(currentSpeed, hardCap);
 
       // Update position
