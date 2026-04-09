@@ -11,6 +11,7 @@ import {
   simulateRace,
   ECONOMY,
   RaceSimulationResult,
+  PERF_BOOST_TEMPLATES,
 } from '@track-stars/shared';
 
 interface RaceRequest {
@@ -114,15 +115,22 @@ export function runRace(request: RaceRequest): {
   const totalRunners = eventType === '2000mSC' ? 12 : 8;
   const playerLane = Math.floor(Math.random() * totalRunners) + 1;
 
+  // Calculate perf boost bonuses
+  let perfSpd = 0, perfSta = 0, perfAcc = 0, perfFrm = 0;
+  for (const bid of (athleteRow.appliedPerfBoosts || [])) {
+    const pb = PERF_BOOST_TEMPLATES.find(t => t.id === bid);
+    if (pb) { perfSpd += pb.statBoosts.speed; perfSta += pb.statBoosts.stamina; perfAcc += pb.statBoosts.acceleration; perfFrm += pb.statBoosts.form; }
+  }
+
   const playerRunner: SimRunnerInput = {
     lane: playerLane,
     displayName: user.displayName,
     stats: template.stats,
     bonusStats: {
-      speed: athleteRow.speedBonus,
-      stamina: athleteRow.staminaBonus,
-      acceleration: athleteRow.accelerationBonus,
-      form: athleteRow.formBonus,
+      speed: athleteRow.speedBonus + perfSpd,
+      stamina: athleteRow.staminaBonus + perfSta,
+      acceleration: athleteRow.accelerationBonus + perfAcc,
+      form: athleteRow.formBonus + perfFrm,
     },
     boosts: userBoosts,
     overallRating: template.overallRating,
@@ -268,11 +276,17 @@ export function runChallengeRace(challengeId: string): RaceSimulationResult {
       if (bt) boosts.push(bt);
     }
 
+    // Include perf boost stats
+    let pSpd = 0, pSta = 0, pAcc = 0, pFrm = 0;
+    for (const bid of (athleteRow.appliedPerfBoosts || [])) {
+      const pb = PERF_BOOST_TEMPLATES.find(t => t.id === bid);
+      if (pb) { pSpd += pb.statBoosts.speed; pSta += pb.statBoosts.stamina; pAcc += pb.statBoosts.acceleration; pFrm += pb.statBoosts.form; }
+    }
     runners.push({
       lane: entry.lane,
       displayName: user.displayName,
       stats: template.stats,
-      bonusStats: { speed: athleteRow.speedBonus, stamina: athleteRow.staminaBonus, acceleration: athleteRow.accelerationBonus, form: athleteRow.formBonus },
+      bonusStats: { speed: athleteRow.speedBonus + pSpd, stamina: athleteRow.staminaBonus + pSta, acceleration: athleteRow.accelerationBonus + pAcc, form: athleteRow.formBonus + pFrm },
       boosts,
       overallRating: template.overallRating,
       splitType: template.splitType,

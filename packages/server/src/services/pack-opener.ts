@@ -5,6 +5,7 @@ import {
   PackContents,
   AthleteCardTemplate,
   BoostCardTemplate,
+  PerfBoostTemplate,
   Rarity,
   PACK_CONTENTS,
   PACK_DROP_RATES,
@@ -13,6 +14,9 @@ import {
   ATHLETE_TEMPLATES,
   BOOST_TEMPLATES,
   RARITY_STAT_RANGES,
+  PERF_BOOST_TEMPLATES,
+  PERF_BOOST_DROP_RATES,
+  PACK_PERF_BOOST_COUNTS,
 } from '@track-stars/shared';
 
 function pickRarity(rates: Record<Rarity, number>): Rarity {
@@ -135,12 +139,31 @@ export function openPack(userId: string, packType: PackType): PackContents {
 
     const existing = db.userBoosts.find(b => b.userId === userId && b.boostCardId === template.id);
     if (existing) {
-      existing.quantity += 1;
+      if (existing.quantity < 100) existing.quantity += 1; // cap at 100
     } else {
       db.userBoosts.push({ id: uuid(), userId, boostCardId: template.id, quantity: 1 });
     }
   }
 
+  // Performance boosts
+  const perfBoosts: PerfBoostTemplate[] = [];
+  const perfBoostCount = PACK_PERF_BOOST_COUNTS[packType] || 0;
+  const perfRates = PERF_BOOST_DROP_RATES[packType];
+  if (!db.userPerfBoosts) db.userPerfBoosts = [];
+
+  for (let i = 0; i < perfBoostCount; i++) {
+    const rarity = pickRarity(perfRates);
+    const template = pickTemplate(PERF_BOOST_TEMPLATES, rarity);
+    perfBoosts.push(template);
+
+    const existing = db.userPerfBoosts.find(b => b.userId === userId && b.perfBoostId === template.id);
+    if (existing) {
+      if (existing.quantity < 100) existing.quantity += 1; // cap at 100
+    } else {
+      db.userPerfBoosts.push({ id: uuid(), userId, perfBoostId: template.id, quantity: 1 });
+    }
+  }
+
   saveDb();
-  return { athletes, boosts };
+  return { athletes, boosts, perfBoosts };
 }

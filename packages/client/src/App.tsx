@@ -28,6 +28,7 @@ function App() {
   const [challengeFriendIds, setChallengeFriendIds] = useState<string[]>([]);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [challengeEventType, setChallengeEventType] = useState<string | null>(null);
+  const [collectionKey, setCollectionKey] = useState(0);
   const [raceData, setRaceData] = useState<{
     simulation: RaceSimulationResult;
     playerLane: number;
@@ -104,6 +105,7 @@ function App() {
   switch (screen) {
     case 'collection':
       return <Collection
+        key={collectionKey}
         onBack={() => setScreen('menu')}
         onCustomize={(athleteId: string) => { setCustomizeAthleteId(athleteId); setScreen('customize'); }}
       />;
@@ -219,7 +221,7 @@ function App() {
       return (
         <CustomizeLoader
           athleteId={customizeAthleteId}
-          onSave={() => setScreen('collection')}
+          onSave={() => { setCollectionKey(k => k + 1); setScreen('collection'); }}
           onBack={() => setScreen('collection')}
         />
       );

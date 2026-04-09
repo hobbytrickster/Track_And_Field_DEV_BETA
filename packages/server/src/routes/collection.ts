@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { getDb, saveDb } from '../db';
 import { authenticate } from './auth';
-import { ATHLETE_TEMPLATES, BOOST_TEMPLATES, ECONOMY } from '@track-stars/shared';
+import { ATHLETE_TEMPLATES, BOOST_TEMPLATES, ECONOMY, PERF_BOOST_TEMPLATES } from '@track-stars/shared';
 
 export function registerCollectionRoutes(app: FastifyInstance) {
   app.get('/api/collection/athletes', async (request, reply) => {
@@ -37,6 +37,7 @@ export function registerCollectionRoutes(app: FastifyInstance) {
           },
           appearance: a.appearance || null,
           raceStats: a.raceStats || null,
+          appliedPerfBoosts: (a.appliedPerfBoosts || []).map(id => PERF_BOOST_TEMPLATES.find(t => t.id === id)).filter(Boolean),
         };
       });
   });
@@ -148,5 +149,58 @@ export function registerCollectionRoutes(app: FastifyInstance) {
     const db = getDb();
     const count = db.userAthletes.filter(a => a.userId === userId).length;
     return { count, max: 50 };
+  });
+
+  // List user's performance boosts
+  app.get('/api/collection/perf-boosts', async (request, reply) => {
+    const userId = authenticate(request, reply);
+    if (!userId) return;
+    const db = getDb();
+    if (!db.userPerfBoosts) db.userPerfBoosts = [];
+    return db.userPerfBoosts
+      .filter(b => b.userId === userId && b.quantity > 0)
+      .map(b => ({
+        id: b.id,
+        perfBoostId: b.perfBoostId,
+        template: PERF_BOOST_TEMPLATES.find(t => t.id === b.perfBoostId),
+        quantity: b.quantity,
+      }));
+  });
+
+  // Apply a performance boost to an athlete (permanent, max 3)
+  app.post('/api/collection/athletes/:id/apply-perf-boost', async (request, reply) => {
+    const userId = authenticate(request, reply);
+    if (!userId) return;
+    const { id } = request.params as any;
+    const { perfBoostId } = request.body as any;
+
+    const db = getDb();
+    if (!db.userPerfBoosts) db.userPerfBoosts = [];
+    const athlete = db.userAthletes.find(a => a.id === id && a.userId === userId);
+    if (!athlete) return reply.status(404).send({ error: 'Athlete not found' });
+
+    if (!athlete.appliedPerfBoosts) athlete.appliedPerfBoosts = [];
+    if (athlete.appliedPerfBoosts.length >= 3) {
+      return reply.status(400).send({ error: 'Athlete already has 3 performance boosts applied' });
+    }
+    if (athlete.appliedPerfBoosts.includes(perfBoostId)) {
+      return reply.status(400).send({ error: 'This gear type is already applied to this athlete' });
+    }
+
+    const userBoost = db.userPerfBoosts.find(b => b.userId === userId && b.perfBoostId === perfBoostId && b.quantity > 0);
+    if (!userBoost) return reply.status(404).send({ error: 'Performance boost not found in inventory' });
+
+    const template = PERF_BOOST_TEMPLATES.find(t => t.id === perfBoostId);
+    if (!template) return reply.status(404).send({ error: 'Invalid boost template' });
+
+    // Apply the boost (permanent)
+    athlete.appliedPerfBoosts.push(perfBoostId);
+    userBoost.quantity -= 1;
+
+    saveDb();
+    return {
+      ok: true,
+      appliedPerfBoosts: athlete.appliedPerfBoosts.map(bid => PERF_BOOST_TEMPLATES.find(t => t.id === bid)).filter(Boolean),
+    };
   });
 }

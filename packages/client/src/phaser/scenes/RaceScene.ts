@@ -1284,12 +1284,13 @@ export class RaceScene extends Phaser.Scene {
             const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);
             const spreadPos = getTrackPoint(startLane, trackProg, cfg);
             const blend = rd.distance / 30;
-            const eased = blend * blend; // ease-in so they accelerate into the merge
+            const eased = blend * blend;
             pos = {
               x: spreadPos.x + (pos.x - spreadPos.x) * eased,
               y: spreadPos.y + (pos.y - spreadPos.y) * eased,
             };
           }
+
         } else if (this.eventType === '800m') {
           const effectiveLane = getEffectiveLane800(rd.lane, rd.distance);
           const trackProg = distanceToTrackProgress(rd.lane, rd.distance, this.eventType, cfg);

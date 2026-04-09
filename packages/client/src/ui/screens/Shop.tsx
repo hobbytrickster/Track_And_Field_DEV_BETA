@@ -283,6 +283,28 @@ export function Shop({ coins, onCoinsUpdate, onBack }: Props) {
             </div>
           )}
 
+          {packResult.perfBoosts && packResult.perfBoosts.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <h4 style={{ color: '#00ff88', margin: '0 0 8px' }}>Gear</h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                {packResult.perfBoosts.map((pb: any, i: number) => (
+                  <div key={i} style={{
+                    background: `linear-gradient(135deg, ${pb.color}44, ${pb.color}22)`,
+                    border: `2px solid ${pb.color}`, borderRadius: 10, padding: '8px 12px',
+                    textAlign: 'center', minWidth: 100,
+                  }}>
+                    <div style={{ fontSize: 24 }}>{pb.iconKey}</div>
+                    <div style={{ fontSize: 12, fontWeight: 'bold', color: pb.color }}>{pb.name}</div>
+                    <div style={{ fontSize: 10, color: '#00ff88' }}>
+                      +{pb.statBoosts.speed}S +{pb.statBoosts.stamina}E +{pb.statBoosts.acceleration}A +{pb.statBoosts.form}F
+                    </div>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase' }}>{pb.rarity}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={() => setPackResult(null)} style={{
             display: 'block', margin: '16px auto 0', padding: '10px 30px',
             background: '#cc2244', color: '#fff', border: 'none', borderRadius: 8,

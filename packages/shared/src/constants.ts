@@ -1,4 +1,4 @@
-import { Rarity, EventType, PackType, AthleteCardTemplate, BoostCardTemplate, BoostEffectType, SplitType } from './types';
+import { Rarity, EventType, PackType, AthleteCardTemplate, BoostCardTemplate, BoostEffectType, SplitType, PerfBoostTemplate } from './types';
 
 // ============================================================
 // Race Event Definitions
@@ -380,4 +380,57 @@ export const BOOST_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
   gold:   { bronze: 0, silver: 0.15, gold: 0.45, platinum: 0.30, diamond: 0.10, superstar: 0, legend: 0 },
   boost:  { bronze: 0.15, silver: 0.35, gold: 0.30, platinum: 0.15, diamond: 0.05, superstar: 0, legend: 0 },
   super:  { bronze: 0, silver: 0, gold: 0.20, platinum: 0.40, diamond: 0.40, superstar: 0, legend: 0 },
+};
+
+// ============================================================
+// Performance Boosts (permanent stat-enhancing items)
+// ============================================================
+// Max OVR with 3 legend boosts: 100 + 3*~8 = ~125
+export const PERF_BOOST_TEMPLATES: PerfBoostTemplate[] = [
+  // Bronze: +1-2 to one stat
+  { id: 101, name: 'Light Spikes', description: 'Slightly lighter racing spikes.', rarity: 'bronze', statBoosts: { speed: 2, stamina: 0, acceleration: 1, form: 0 }, iconKey: '👟', color: '#CD7F32' },
+  { id: 102, name: 'Basic Tape', description: 'Standard athletic tape for support.', rarity: 'bronze', statBoosts: { speed: 0, stamina: 2, acceleration: 0, form: 1 }, iconKey: '🩹', color: '#CD7F32' },
+  { id: 103, name: 'Water Bottle', description: 'Stay hydrated, run longer.', rarity: 'bronze', statBoosts: { speed: 0, stamina: 1, acceleration: 0, form: 2 }, iconKey: '💧', color: '#CD7F32' },
+  // Silver: +2-3 to one or two stats
+  { id: 104, name: 'Racing Sunglasses', description: 'Aerodynamic shades for focus.', rarity: 'silver', statBoosts: { speed: 3, stamina: 0, acceleration: 2, form: 0 }, iconKey: '🕶️', color: '#C0C0C0' },
+  { id: 105, name: 'Compression Socks', description: 'Better blood flow, less fatigue.', rarity: 'silver', statBoosts: { speed: 0, stamina: 3, acceleration: 0, form: 2 }, iconKey: '🧦', color: '#C0C0C0' },
+  { id: 106, name: 'Energy Gel', description: 'Quick energy boost for endurance.', rarity: 'silver', statBoosts: { speed: 1, stamina: 2, acceleration: 2, form: 0 }, iconKey: '⚡', color: '#C0C0C0' },
+  // Gold: +3-5 to two stats
+  { id: 107, name: 'Carbon Plate Shoes', description: 'Advanced carbon fiber technology.', rarity: 'gold', statBoosts: { speed: 5, stamina: 0, acceleration: 3, form: 0 }, iconKey: '🔥', color: '#FFD700' },
+  { id: 108, name: 'Altitude Mask', description: 'Trained at elevation. Lung capacity up.', rarity: 'gold', statBoosts: { speed: 0, stamina: 5, acceleration: 0, form: 3 }, iconKey: '🏔️', color: '#FFD700' },
+  { id: 109, name: 'Sprint Coach', description: 'Expert coaching improves technique.', rarity: 'gold', statBoosts: { speed: 3, stamina: 0, acceleration: 3, form: 4 }, iconKey: '📋', color: '#FFD700' },
+  // Platinum: +4-6 to two or three stats
+  { id: 110, name: 'Cryo Recovery', description: 'Ice bath recovery. Peak performance.', rarity: 'platinum', statBoosts: { speed: 4, stamina: 5, acceleration: 4, form: 0 }, iconKey: '🧊', color: '#E5E4E2' },
+  { id: 111, name: 'Wind Tunnel Suit', description: 'Aerodynamic racing suit.', rarity: 'platinum', statBoosts: { speed: 6, stamina: 0, acceleration: 5, form: 3 }, iconKey: '💨', color: '#E5E4E2' },
+  { id: 112, name: 'Mental Coach', description: 'Unshakeable focus under pressure.', rarity: 'platinum', statBoosts: { speed: 0, stamina: 4, acceleration: 4, form: 6 }, iconKey: '🧠', color: '#E5E4E2' },
+  // Diamond: +5-8 to two or three stats
+  { id: 113, name: 'Biomech Analysis', description: 'AI-optimized running form.', rarity: 'diamond', statBoosts: { speed: 6, stamina: 5, acceleration: 7, form: 0 }, iconKey: '🤖', color: '#B9F2FF' },
+  { id: 114, name: 'Hyperbaric Chamber', description: 'Elite oxygen therapy recovery.', rarity: 'diamond', statBoosts: { speed: 0, stamina: 8, acceleration: 5, form: 6 }, iconKey: '🫁', color: '#B9F2FF' },
+  { id: 115, name: 'Prototype Spikes', description: 'Unreleased next-gen racing spikes.', rarity: 'diamond', statBoosts: { speed: 8, stamina: 0, acceleration: 6, form: 5 }, iconKey: '⚙️', color: '#B9F2FF' },
+  // Superstar: +7-9 to three or four stats
+  { id: 116, name: 'Olympic Camp', description: 'Trained with the best in the world.', rarity: 'superstar', statBoosts: { speed: 7, stamina: 7, acceleration: 7, form: 7 }, iconKey: '🏅', color: '#aa44ff' },
+  { id: 117, name: 'Genetic Edge', description: 'Born to run. Peak human potential.', rarity: 'superstar', statBoosts: { speed: 9, stamina: 7, acceleration: 8, form: 5 }, iconKey: '🧬', color: '#aa44ff' },
+  { id: 120, name: 'World Tour', description: 'Competed on every continent. Unmatched experience.', rarity: 'superstar', statBoosts: { speed: 6, stamina: 8, acceleration: 7, form: 9 }, iconKey: '🌍', color: '#aa44ff' },
+  // Legend: +8-9 to all stats (~8.3 OVR per boost, 3 = ~25 → 125 max)
+  { id: 118, name: 'GOAT Training', description: 'Trained by the greatest of all time.', rarity: 'legend', statBoosts: { speed: 9, stamina: 8, acceleration: 8, form: 8 }, iconKey: '🐐', color: '#ff8800' },
+  { id: 119, name: 'Lightning Blood', description: 'Otherworldly speed flows through you.', rarity: 'legend', statBoosts: { speed: 8, stamina: 9, acceleration: 9, form: 8 }, iconKey: '⚡', color: '#ff8800' },
+  { id: 121, name: 'Mythic Aura', description: 'An otherworldly presence. Legends speak of this runner.', rarity: 'legend', statBoosts: { speed: 9, stamina: 9, acceleration: 8, form: 8 }, iconKey: '👑', color: '#ff8800' },
+];
+
+// Drop rates for performance boosts in packs
+export const PERF_BOOST_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
+  bronze: { bronze: 0.80, silver: 0.20, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  silver: { bronze: 0.30, silver: 0.50, gold: 0.20, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gold:   { bronze: 0, silver: 0.20, gold: 0.50, platinum: 0.25, diamond: 0.05, superstar: 0, legend: 0 },
+  boost:  { bronze: 0.20, silver: 0.40, gold: 0.30, platinum: 0.10, diamond: 0, superstar: 0, legend: 0 },
+  super:  { bronze: 0, silver: 0, gold: 0.10, platinum: 0.30, diamond: 0.40, superstar: 0.15, legend: 0.05 },
+};
+
+// How many perf boosts per pack
+export const PACK_PERF_BOOST_COUNTS: Record<PackType, number> = {
+  bronze: 1,
+  silver: 1,
+  gold: 1,
+  boost: 2,
+  super: 2,
 };

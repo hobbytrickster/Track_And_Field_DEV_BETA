@@ -73,6 +73,9 @@ export const api = {
   releaseAthlete: (id: string) =>
     request(`/collection/athletes/${id}`, { method: 'DELETE' }),
   getTeamCount: () => request('/collection/count'),
+  getPerfBoosts: () => request('/collection/perf-boosts'),
+  applyPerfBoost: (athleteId: string, perfBoostId: number) =>
+    request(`/collection/athletes/${athleteId}/apply-perf-boost`, { method: 'POST', body: JSON.stringify({ perfBoostId }) }),
 
   // Shop
   getShop: () => request('/shop'),

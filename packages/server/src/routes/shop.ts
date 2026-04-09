@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { getDb, saveDb } from '../db';
 import { authenticate } from './auth';
-import { PACK_COSTS, PackType } from '@track-stars/shared';
+import { PACK_COSTS, PACK_CONTENTS, PackType } from '@track-stars/shared';
 import { openPack } from '../services/pack-opener';
 
 export function registerShopRoutes(app: FastifyInstance) {
@@ -25,8 +25,8 @@ export function registerShopRoutes(app: FastifyInstance) {
 
     // Check team cap (50 max)
     const currentCount = db.userAthletes.filter(a => a.userId === userId).length;
-    const packAthletes = ({ bronze: 3, silver: 3, gold: 5 } as any)[packType] || 3;
-    if (currentCount + packAthletes > 50) {
+    const packAthletes = PACK_CONTENTS[packType as PackType]?.athletes || 0;
+    if (packAthletes > 0 && currentCount + packAthletes > 50) {
       return reply.status(400).send({ error: `Team is full! You have ${currentCount}/50 athletes. Release some first.` });
     }
 

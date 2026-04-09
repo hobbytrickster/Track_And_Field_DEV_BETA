@@ -16,10 +16,13 @@ export function Collection({ onBack, onCustomize }: Props) {
   const [multiSelect, setMultiSelect] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selling, setSelling] = useState(false);
+  const [perfBoosts, setPerfBoosts] = useState<any[]>([]);
+  const [showBoosts, setShowBoosts] = useState(false);
 
   useEffect(() => {
-    api.getAthletes().then(data => {
-      setAthletes(data);
+    Promise.all([api.getAthletes(), api.getPerfBoosts()]).then(([ath, pbs]) => {
+      setAthletes(ath);
+      setPerfBoosts(pbs);
       setLoading(false);
     });
   }, []);
@@ -205,52 +208,128 @@ export function Collection({ onBack, onCustomize }: Props) {
           {/* Detail panel (only in single-select mode) */}
           {!multiSelect && selected && (
             <div style={{
-              width: 260, background: 'rgba(20,20,50,0.8)', borderRadius: 12,
-              padding: 16, border: '1px solid #444',
+              width: 480, background: 'rgba(20,20,50,0.8)', borderRadius: 14,
+              padding: 24, border: '1px solid #444', overflowY: 'auto', maxHeight: '90vh',
             }}>
               <AthleteCard athlete={selected} />
               {onCustomize && (
                 <button onClick={() => onCustomize(selected.id)} style={{
-                  width: '100%', marginTop: 12, padding: '12px', fontSize: 16, fontWeight: 'bold',
+                  width: '100%', marginTop: 16, padding: '14px', fontSize: 18, fontWeight: 'bold',
                   background: 'linear-gradient(135deg, #ff6688, #ff4466)', color: '#fff',
-                  border: 'none', borderRadius: 10, cursor: 'pointer',
+                  border: 'none', borderRadius: 12, cursor: 'pointer',
                 }}>
                   Customize Look
                 </button>
               )}
-              <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#888' }}>
+              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 14, color: '#888' }}>
                 {(selected as any).appearance ? 'Custom look applied' : 'Default look'}
               </div>
+
+              {/* Performance Boost Application */}
+              {(() => {
+                const applied = (selected as any).appliedPerfBoosts || [];
+                const slotsLeft = 3 - applied.length;
+                return (
+                  <div style={{ marginTop: 14, padding: 14, background: 'rgba(0,0,0,0.3)', borderRadius: 10 }}>
+                    <div style={{ color: '#00ff88', fontWeight: 'bold', fontSize: 17, marginBottom: 10 }}>
+                      GEAR ({applied.length}/3)
+                    </div>
+                    {applied.map((pb: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: '#ccc', marginBottom: 6 }}>
+                        <span style={{ fontSize: 24 }}>{pb.iconKey}</span>
+                        <span style={{ color: pb.color, fontWeight: 'bold' }}>{pb.name}</span>
+                        <span style={{ color: '#00ff88', fontSize: 12 }}>+{pb.statBoosts.speed}S +{pb.statBoosts.stamina}E +{pb.statBoosts.acceleration}A +{pb.statBoosts.form}F</span>
+                      </div>
+                    ))}
+                    {slotsLeft > 0 && (
+                      <button onClick={() => setShowBoosts(!showBoosts)} style={{
+                        width: '100%', marginTop: 8, padding: '10px', fontSize: 15, fontWeight: 'bold',
+                        background: '#224422', color: '#00ff88', border: '2px solid #00ff88',
+                        borderRadius: 8, cursor: 'pointer',
+                      }}>
+                        {showBoosts ? 'HIDE GEAR' : `ADD GEAR (${slotsLeft} slot${slotsLeft > 1 ? 's' : ''} left)`}
+                      </button>
+                    )}
+                    {showBoosts && slotsLeft > 0 && (
+                      <div style={{ marginTop: 10, maxHeight: 250, overflowY: 'auto' }}>
+                        {perfBoosts.filter(b => b.quantity > 0).length === 0 ? (
+                          <div style={{ color: '#666', fontSize: 14, textAlign: 'center', padding: 10 }}>No gear available. Buy packs!</div>
+                        ) : perfBoosts.filter(b => b.quantity > 0 && !applied.some((a: any) => a.id === b.template?.id)).map((b: any) => {
+                          const rarityColors: Record<string, string> = { bronze: '#CD7F32', silver: '#C0C0C0', gold: '#FFD700', platinum: '#E5E4E2', diamond: '#B9F2FF', superstar: '#aa44ff', legend: '#ff8800' };
+                          const rc = rarityColors[b.template.rarity] || '#888';
+                          return (
+                          <div key={b.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                            background: `linear-gradient(135deg, ${rc}15, ${rc}08)`,
+                            borderRadius: 10, marginBottom: 8, cursor: 'pointer',
+                            border: `2px solid ${rc}66`,
+                          }} onClick={async () => {
+                            if (!window.confirm(`Apply ${b.template.name} to this athlete?\n\n+${b.template.statBoosts.speed} SPD, +${b.template.statBoosts.stamina} STA, +${b.template.statBoosts.acceleration} ACC, +${b.template.statBoosts.form} FRM\n\nThis CANNOT be undone!`)) return;
+                            try {
+                              await api.applyPerfBoost(selected.id, b.template.id);
+                              const [freshAthletes, freshBoosts] = await Promise.all([api.getAthletes(), api.getPerfBoosts()]);
+                              setAthletes(freshAthletes);
+                              setPerfBoosts(freshBoosts);
+                              setSelected(freshAthletes.find((a: any) => a.id === selected.id) || null);
+                            } catch (err: any) { alert('Error: ' + err.message); }
+                          }}>
+                            <div style={{
+                              width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: `radial-gradient(circle, ${rc}55, ${rc}22)`, border: `2px solid ${rc}`,
+                              fontSize: 24, flexShrink: 0,
+                            }}>{b.template.iconKey}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 16, fontWeight: 'bold', color: b.template.color }}>{b.template.name}</span>
+                                <span style={{
+                                  fontSize: 10, fontWeight: 'bold', color: rc, textTransform: 'uppercase',
+                                  background: `${rc}22`, padding: '1px 6px', borderRadius: 4, border: `1px solid ${rc}44`,
+                                }}>{b.template.rarity}</span>
+                                <span style={{ color: '#888', fontSize: 13 }}>x{b.quantity}</span>
+                              </div>
+                              <div style={{ fontSize: 14, color: '#00ff88', marginTop: 2, fontWeight: 'bold' }}>
+                                +{b.template.statBoosts.speed} SPD  +{b.template.statBoosts.stamina} STA  +{b.template.statBoosts.acceleration} ACC  +{b.template.statBoosts.form} FRM
+                              </div>
+                              <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{b.template.description}</div>
+                            </div>
+                          </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Race Stats */}
               {(() => {
                 const rs = (selected as any).raceStats;
                 if (!rs || rs.totalRaces === 0) return (
-                  <div style={{ marginTop: 10, padding: 8, background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: 12, color: '#666', textAlign: 'center' }}>
+                  <div style={{ marginTop: 14, padding: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 10, fontSize: 14, color: '#666', textAlign: 'center' }}>
                     No race history yet
                   </div>
                 );
                 return (
-                  <div style={{ marginTop: 10, padding: 10, background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: 12 }}>
-                    <div style={{ color: '#FFD700', fontWeight: 'bold', marginBottom: 6, fontSize: 13 }}>RACE STATS</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                  <div style={{ marginTop: 14, padding: 14, background: 'rgba(0,0,0,0.3)', borderRadius: 10, fontSize: 15 }}>
+                    <div style={{ color: '#FFD700', fontWeight: 'bold', marginBottom: 8, fontSize: 17 }}>RACE STATS</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', marginBottom: 3 }}>
                       <span>Races</span><span style={{ fontWeight: 'bold' }}>{rs.totalRaces}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#44ff44' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#44ff44', marginBottom: 3 }}>
                       <span>Wins (1st)</span><span style={{ fontWeight: 'bold' }}>{rs.wins}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#C0C0C0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#C0C0C0', marginBottom: 3 }}>
                       <span>Podiums (2nd/3rd)</span><span style={{ fontWeight: 'bold' }}>{rs.podiums}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff6666' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff6666', marginBottom: 3 }}>
                       <span>Last Place</span><span style={{ fontWeight: 'bold' }}>{rs.lastPlaces}</span>
                     </div>
                     {rs.bestTimes && Object.keys(rs.bestTimes).length > 0 && (
                       <>
-                        <div style={{ color: '#FFD700', fontWeight: 'bold', marginTop: 6, marginBottom: 4, fontSize: 12 }}>BEST TIMES</div>
+                        <div style={{ color: '#FFD700', fontWeight: 'bold', marginTop: 8, marginBottom: 6, fontSize: 15 }}>BEST TIMES</div>
                         {Object.entries(rs.bestTimes).map(([evt, ms]: [string, any]) => {
-                          const t2 = ms >= 60000 ? `${Math.floor(ms/60000)}:${((ms%60000)/1000).toFixed(3).padStart(6,'0')}` : `${(ms/1000).toFixed(3)}s`;
-                          return <div key={evt} style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                          const t2 = ms >= 60000 ? `${Math.floor(ms/60000)}:${((ms%60000)/1000).toFixed(3).padStart(6,'0')}` : `${(ms/1000).toFixed(3)}`;
+                          return <div key={evt} style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', marginBottom: 2 }}>
                             <span>{evt}</span><span style={{ fontWeight: 'bold', color: '#FFD700' }}>{t2}</span>
                           </div>;
                         })}
@@ -274,9 +353,9 @@ export function Collection({ onBack, onCustomize }: Props) {
                   } catch (err: any) { alert('Sell failed: ' + err.message); }
                 }
               }} style={{
-                width: '100%', marginTop: 8, padding: '10px', fontSize: 14,
+                width: '100%', marginTop: 14, padding: '12px', fontSize: 16, fontWeight: 'bold',
                 background: '#442222', color: '#ff6666', border: '1px solid #663333',
-                borderRadius: 8, cursor: 'pointer',
+                borderRadius: 10, cursor: 'pointer',
               }}>
                 Sell Athlete
               </button>

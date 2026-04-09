@@ -7,6 +7,7 @@ export interface DbSchema {
   users: DbUser[];
   userAthletes: DbUserAthlete[];
   userBoosts: DbUserBoost[];
+  userPerfBoosts: DbUserPerfBoost[];
   rosters: DbRoster[];
   rosterSlots: DbRosterSlot[];
   races: DbRace[];
@@ -122,10 +123,18 @@ export interface DbUserAthlete {
   raceStats?: {
     totalRaces: number;
     wins: number;
-    podiums: number;    // 2nd or 3rd
-    lastPlaces: number; // 8th place
-    bestTimes: Record<string, number>; // event → best time ms
+    podiums: number;
+    lastPlaces: number;
+    bestTimes: Record<string, number>;
   };
+  appliedPerfBoosts?: number[]; // array of PerfBoostTemplate IDs (max 3)
+}
+
+export interface DbUserPerfBoost {
+  id: string;
+  userId: string;
+  perfBoostId: number; // PerfBoostTemplate ID
+  quantity: number;
 }
 
 export interface DbUserBoost {
@@ -172,6 +181,7 @@ function defaultDb(): DbSchema {
     users: [],
     userAthletes: [],
     userBoosts: [],
+    userPerfBoosts: [],
     rosters: [],
     rosterSlots: [],
     races: [],

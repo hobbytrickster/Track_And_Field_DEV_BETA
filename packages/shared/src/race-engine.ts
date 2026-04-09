@@ -180,7 +180,11 @@ function staminaCurve800(tickPct: number, staminaStat: number, splitType: string
  * can have an off race where they run 10-15% slower than their best.
  */
 function formNoise(rand: () => number, formStat: number): number {
-  const amplitude = ((100 - formStat) / 100) * 0.08; // per-tick noise: 0 to 8%
+  // Base noise from form stat (low form = more variance)
+  const formAmplitude = ((100 - formStat) / 100) * 0.08; // 0% to 8%
+  // Minimum noise floor so even perfect-form athletes have slight variation
+  const minAmplitude = 0.006; // ±0.6% guaranteed variance per tick
+  const amplitude = Math.max(minAmplitude, formAmplitude);
   return 1.0 + (rand() - 0.5) * 2 * amplitude;
 }
 
@@ -348,12 +352,15 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
   const rngMap = new Map<number, () => number>();
   const boostMap = new Map<number, ActiveBoost[]>();
   const dayFactorMap = new Map<number, number>();
+  const uniqueOffsetMap = new Map<number, number>(); // per-runner speed uniqueness
 
   for (const ri of runnerInputs) {
     const rng = mulberry32(seed + ri.lane * 7919);
     rngMap.set(ri.lane, rng);
     // Roll the "day factor" once per runner per race
     dayFactorMap.set(ri.lane, raceDayFactor(rng, ri.stats.form, ri.overallRating));
+    // Unique per-runner offset: ±1.5% — ensures no two runners with identical stats get identical times
+    uniqueOffsetMap.set(ri.lane, 1.0 + (rng() - 0.5) * 0.03);
 
     // Assign boost timing (max 1 boost per runner)
     const activeBoosts: ActiveBoost[] = [];
@@ -472,11 +479,17 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
         }
       }
 
+      // Apply bonus stats (from leveling + gear) on top of base stats
+      // Base stats capped at 99, but bonuses can push beyond for geared athletes
+      const totalSpeed = ri.stats.speed + (ri.bonusStats?.speed || 0);
+      const totalStamina = ri.stats.stamina + (ri.bonusStats?.stamina || 0);
+      const totalAccel = ri.stats.acceleration + (ri.bonusStats?.acceleration || 0);
+      const totalForm = ri.stats.form + (ri.bonusStats?.form || 0);
       const effectiveStats = {
-        speed: Math.max(10, Math.min(99, ri.stats.speed - speedPenalty)),
-        stamina: Math.max(10, Math.min(99, ri.stats.stamina - staminaPenalty)),
-        acceleration: Math.max(10, Math.min(99, ri.stats.acceleration - accelPenalty)),
-        form: Math.max(10, Math.min(99, ri.stats.form - formPenalty)),
+        speed: Math.max(10, totalSpeed - speedPenalty),
+        stamina: Math.max(10, totalStamina - staminaPenalty),
+        acceleration: Math.max(10, totalAccel - accelPenalty),
+        form: Math.max(10, totalForm - formPenalty),
       };
 
       // Current race progress for this runner
@@ -526,12 +539,14 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
 
       // Calculate speed this tick
       const dayFactor = dayFactorMap.get(ri.lane) || 1.0;
+      const uniqueOffset = uniqueOffsetMap.get(ri.lane) || 1.0;
 
       let currentSpeed = topSpeed
         * accelFactor
         * effectiveStamina
         * formFactor
         * dayFactor
+        * uniqueOffset
         * (boostResult.speedMult)
         * (boostResult.accelMult > 1 && runnerPct < 0.15 ? boostResult.accelMult : 1)
         * (1 - intimidateDebuff);
@@ -568,13 +583,22 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
 
       // Update position
       state.speed = Math.max(0, currentSpeed);
+      const prevDist = state.distance;
       state.distance += state.speed / tickRate;
 
-      // Check finish
-      if (state.distance >= raceDistance) {
-        state.distance = raceDistance;
+      // Check finish with sub-tick interpolation for precise timing
+      let preciseFinishMs: number | undefined;
+      if (state.distance >= raceDistance && !state.finished) {
         state.finished = true;
         state.finishTick = tick;
+        // Interpolate exact crossing time within this tick
+        const distThisTick = state.distance - prevDist;
+        const distNeeded = raceDistance - prevDist;
+        const tickFraction = distThisTick > 0 ? distNeeded / distThisTick : 0;
+        preciseFinishMs = ((tick - 1 + tickFraction) / tickRate) * 1000;
+        state.distance = raceDistance;
+        // Store precise time on the state for results
+        (state as any).preciseFinishMs = preciseFinishMs;
       }
 
       runnerFrames.push({
@@ -584,7 +608,7 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
         progress: state.distance / raceDistance,
         activeBoosts: boostResult.activeNames,
         finished: state.finished,
-        finishTimeMs: state.finished ? Math.round((tick / tickRate) * 1000) : undefined,
+        finishTimeMs: state.finished ? Math.round((state as any).preciseFinishMs ?? (tick / tickRate) * 1000) : undefined,
       });
     }
 
@@ -593,14 +617,18 @@ export function simulateRace(input: RaceSimulationInput): RaceSimulationResult {
     tick++;
   }
 
-  // Build results sorted by finish time
+  // Build results sorted by precise finish time (sub-tick interpolation breaks ties)
   const results: RaceResult[] = runners
     .filter(r => r.finished)
-    .sort((a, b) => a.finishTick - b.finishTick)
+    .sort((a, b) => {
+      const aMs = (a as any).preciseFinishMs ?? (a.finishTick / tickRate) * 1000;
+      const bMs = (b as any).preciseFinishMs ?? (b.finishTick / tickRate) * 1000;
+      return aMs - bMs;
+    })
     .map((r, i) => ({
       lane: r.lane,
       displayName: r.displayName,
-      finishTimeMs: Math.round((r.finishTick / tickRate) * 1000),
+      finishTimeMs: Math.round((r as any).preciseFinishMs ?? (r.finishTick / tickRate) * 1000),
       finishPosition: i + 1,
     }));
 

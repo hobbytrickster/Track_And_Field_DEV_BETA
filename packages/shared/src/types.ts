@@ -60,6 +60,17 @@ export interface UserAthlete {
   bonusStats: AthleteStats;  // from leveling
 }
 
+// --- Performance Boosts (permanent stat items) ---
+export interface PerfBoostTemplate {
+  id: number;
+  name: string;
+  description: string;
+  rarity: Rarity;
+  statBoosts: AthleteStats; // speed, stamina, acceleration, form bonuses
+  iconKey: string;  // emoji or icon identifier
+  color: string;
+}
+
 // --- Boost / Big Impact Cards ---
 export type BoostEffectType =
   | 'speed_burst'        // Temporary speed increase
@@ -202,6 +213,7 @@ export type PackType = 'bronze' | 'silver' | 'gold' | 'boost' | 'super';
 export interface PackContents {
   athletes: AthleteCardTemplate[];
   boosts: BoostCardTemplate[];
+  perfBoosts: PerfBoostTemplate[];
 }
 
 // --- Socket Events ---

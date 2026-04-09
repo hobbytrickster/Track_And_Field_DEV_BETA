@@ -97,8 +97,8 @@ export function MainMenu({ user, onNavigate, onLogout }: Props) {
           onClick={() => onNavigate('shop')}
         />
         <MenuRow
-          title="BOOSTS"
-          subtitle="View your Big Impact cards"
+          title="INVENTORY"
+          subtitle="Big Impact cards & Gear"
           bg="linear-gradient(135deg, #2a1a0a, #1a100a)"
           borderColor="#8a5a2a"
           accentColor="#ddaa44"
