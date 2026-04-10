@@ -1,0 +1,8 @@
+node_modules
+packages/*/node_modules
+packages/client/dist
+packages/shared/dist
+packages/server/dist
+.git
+*.log
+gamedata
