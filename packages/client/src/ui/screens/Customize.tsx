@@ -210,27 +210,28 @@ export function Customize({ athlete, onSave, onBack }: Props) {
   return (
     <div style={{
       minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a2e, #1a1a0e)',
-      padding: 20, display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap',
+      padding: 20, display: 'flex', gap: 30, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap',
     }}>
       {/* Preview */}
       <div style={{
-        background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 24,
-        border: '2px solid #FFD700', width: 300, textAlign: 'center',
+        background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 28,
+        border: '2px solid #FFD700', width: 360, textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
-        <h3 style={{ color: '#FFD700', marginBottom: 8, fontSize: 20 }}>
+        <h3 style={{ color: '#FFD700', marginBottom: 8, fontSize: 24 }}>
           {athleteName || t?.name || 'Athlete'}
         </h3>
-        <div style={{ color: '#aaa', fontSize: 14, marginBottom: 12 }}>
+        <div style={{ color: '#aaa', fontSize: 17, marginBottom: 14 }}>
           {t?.rarity?.toUpperCase()} | OVR {t?.overallRating} | {t?.specialtyEvent}
         </div>
-        <canvas ref={canvasRef} width={280} height={350}
-          style={{ background: 'linear-gradient(180deg, #87ceeb, #3a8a3a)', borderRadius: 12 }} />
+        <canvas ref={canvasRef} width={320} height={420}
+          style={{ background: 'linear-gradient(180deg, #87ceeb, #3a8a3a)', borderRadius: 12, width: 320, height: 420 }} />
       </div>
 
       {/* Options */}
       <div style={{
         background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 24,
-        border: '1px solid #444', width: 520, overflowY: 'auto', maxHeight: '90vh',
+        border: '1px solid #444', width: 520, overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <button onClick={onBack} style={backBtnStyle}>Back</button>

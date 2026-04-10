@@ -83,6 +83,9 @@ export const PACK_COSTS: Record<PackType, number> = {
   gold: 1000,
   boost: 300,
   super: 15000,
+  gear_basic: 350,
+  gear_pro: 1200,
+  gear_elite: 8000,
 };
 
 export const PACK_CONTENTS: Record<PackType, { athletes: number; boosts: number }> = {
@@ -91,6 +94,9 @@ export const PACK_CONTENTS: Record<PackType, { athletes: number; boosts: number 
   gold:   { athletes: 1, boosts: 3 },
   boost:  { athletes: 0, boosts: 5 },
   super:  { athletes: 1, boosts: 5 },
+  gear_basic: { athletes: 0, boosts: 0 },
+  gear_pro: { athletes: 0, boosts: 0 },
+  gear_elite: { athletes: 0, boosts: 0 },
 };
 
 // Drop rates: probability of each rarity per athlete in a pack
@@ -135,6 +141,9 @@ export const PACK_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
     diamond: 0.10,
     superstar: 0.69, legend: 0.10,
   },
+  gear_basic: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gear_pro: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gear_elite: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
 };
 
 // ============================================================
@@ -380,6 +389,9 @@ export const BOOST_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
   gold:   { bronze: 0, silver: 0.15, gold: 0.45, platinum: 0.30, diamond: 0.10, superstar: 0, legend: 0 },
   boost:  { bronze: 0.15, silver: 0.35, gold: 0.30, platinum: 0.15, diamond: 0.05, superstar: 0, legend: 0 },
   super:  { bronze: 0, silver: 0, gold: 0.20, platinum: 0.40, diamond: 0.40, superstar: 0, legend: 0 },
+  gear_basic: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gear_pro: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gear_elite: { bronze: 0, silver: 0, gold: 0, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
 };
 
 // ============================================================
@@ -424,13 +436,19 @@ export const PERF_BOOST_DROP_RATES: Record<PackType, Record<Rarity, number>> = {
   gold:   { bronze: 0, silver: 0.20, gold: 0.50, platinum: 0.25, diamond: 0.05, superstar: 0, legend: 0 },
   boost:  { bronze: 0.20, silver: 0.40, gold: 0.30, platinum: 0.10, diamond: 0, superstar: 0, legend: 0 },
   super:  { bronze: 0, silver: 0, gold: 0.10, platinum: 0.30, diamond: 0.40, superstar: 0.15, legend: 0.05 },
+  gear_basic: { bronze: 0.50, silver: 0.35, gold: 0.15, platinum: 0, diamond: 0, superstar: 0, legend: 0 },
+  gear_pro: { bronze: 0, silver: 0.15, gold: 0.40, platinum: 0.30, diamond: 0.15, superstar: 0, legend: 0 },
+  gear_elite: { bronze: 0, silver: 0, gold: 0.05, platinum: 0.20, diamond: 0.40, superstar: 0.25, legend: 0.10 },
 };
 
 // How many perf boosts per pack
 export const PACK_PERF_BOOST_COUNTS: Record<PackType, number> = {
-  bronze: 1,
-  silver: 1,
-  gold: 1,
-  boost: 2,
-  super: 2,
+  bronze: 0,
+  silver: 0,
+  gold: 0,
+  boost: 0,
+  super: 0,
+  gear_basic: 3,
+  gear_pro: 3,
+  gear_elite: 2,
 };

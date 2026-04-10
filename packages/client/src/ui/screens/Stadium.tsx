@@ -66,14 +66,15 @@ export function Stadium({ currentStadium, onSave, onBack }: Props) {
   return (
     <div style={{
       minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a2e, #1a1a0e)',
-      padding: 20, display: 'flex', gap: 30, justifyContent: 'center', flexWrap: 'wrap',
+      padding: 20, display: 'flex', gap: 30, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap',
     }}>
       {/* Preview */}
       <div style={{
-        background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 24,
-        border: '2px solid #FFD700', width: 340, textAlign: 'center',
+        background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 28,
+        border: '2px solid #FFD700', width: 550, textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
-        <h3 style={{ color: '#FFD700', marginBottom: 16, fontSize: 22 }}>Stadium Preview</h3>
+        <h3 style={{ color: '#FFD700', marginBottom: 16, fontSize: 24 }}>Stadium Preview</h3>
         <StadiumPreview cfg={cfg} />
         {cfg.stadiumName && (
           <div style={{ marginTop: 12, color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>{cfg.stadiumName}</div>
@@ -83,7 +84,7 @@ export function Stadium({ currentStadium, onSave, onBack }: Props) {
       {/* Options */}
       <div style={{
         background: 'rgba(20,20,50,0.8)', borderRadius: 16, padding: 24,
-        border: '1px solid #444', width: 520, overflowY: 'auto', maxHeight: '90vh',
+        border: '1px solid #444', width: 520, overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <button onClick={onBack} style={backBtnStyle}>Back</button>
@@ -218,7 +219,7 @@ function StadiumPreview({ cfg }: { cfg: StadiumConfig }) {
     }
   }, [cfg, turfImages]);
 
-  return <canvas ref={canvasRef} width={300} height={200} style={{ borderRadius: 12, border: '1px solid #444' }} />;
+  return <canvas ref={canvasRef} width={500} height={330} style={{ borderRadius: 12, border: '1px solid #444', width: 500, height: 330 }} />;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

@@ -208,10 +208,13 @@ export function Collection({ onBack, onCustomize }: Props) {
           {/* Detail panel (only in single-select mode) */}
           {!multiSelect && selected && (
             <div style={{
-              width: 480, background: 'rgba(20,20,50,0.8)', borderRadius: 14,
-              padding: 24, border: '1px solid #444', overflowY: 'auto', maxHeight: '90vh',
+              width: 440, background: 'rgba(20,20,50,0.8)', borderRadius: 14,
+              padding: 24, border: '1px solid #444', overflowY: 'auto', maxHeight: '95vh',
+              minHeight: 800,
             }}>
-              <AthleteCard athlete={selected} />
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <AthleteCard athlete={selected} />
+              </div>
               {onCustomize && (
                 <button onClick={() => onCustomize(selected.id)} style={{
                   width: '100%', marginTop: 16, padding: '14px', fontSize: 18, fontWeight: 'bold',
@@ -238,7 +241,7 @@ export function Collection({ onBack, onCustomize }: Props) {
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: '#ccc', marginBottom: 6 }}>
                         <span style={{ fontSize: 24 }}>{pb.iconKey}</span>
                         <span style={{ color: pb.color, fontWeight: 'bold' }}>{pb.name}</span>
-                        <span style={{ color: '#00ff88', fontSize: 12 }}>+{pb.statBoosts.speed}S +{pb.statBoosts.stamina}E +{pb.statBoosts.acceleration}A +{pb.statBoosts.form}F</span>
+                        <span style={{ color: '#00ff88', fontSize: 12 }}>+{pb.statBoosts.speed} SPD  +{pb.statBoosts.stamina} STA  +{pb.statBoosts.acceleration} ACC  +{pb.statBoosts.form} FRM</span>
                       </div>
                     ))}
                     {slotsLeft > 0 && (

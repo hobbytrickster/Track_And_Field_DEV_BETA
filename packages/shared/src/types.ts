@@ -208,7 +208,7 @@ export interface RaceReward {
 }
 
 // --- Shop ---
-export type PackType = 'bronze' | 'silver' | 'gold' | 'boost' | 'super';
+export type PackType = 'bronze' | 'silver' | 'gold' | 'boost' | 'super' | 'gear_basic' | 'gear_pro' | 'gear_elite';
 
 export interface PackContents {
   athletes: AthleteCardTemplate[];

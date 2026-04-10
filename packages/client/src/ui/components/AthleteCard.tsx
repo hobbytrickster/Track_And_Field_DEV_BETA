@@ -89,32 +89,33 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
         animation: isShimmer ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
         border: selected ? '3px solid #FFD700' : isLegend ? '2px solid #ffaa33' : isSS ? '2px solid #cc66ff' : '2px solid #333',
         borderRadius: 12, padding: '12px', cursor: onClick ? 'pointer' : 'default',
-        width: 195, minHeight: 210, textAlign: 'center', transition: 'transform 0.15s',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        width: 195, height: 250, textAlign: 'center', transition: 'transform 0.15s',
+        display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 8,
+        overflow: 'hidden', gap: 1,
         transform: selected ? 'scale(1.05)' : 'scale(1)',
         boxShadow: isLegend ? '0 0 12px rgba(255,136,0,0.5)' : isSS ? '0 0 12px rgba(170,68,255,0.4)' : undefined,
       }}>
-        <div style={{ fontSize: 15, color: '#fff', fontWeight: 'bold' }}>{displayName}</div>
+        <div style={{ fontSize: 15, color: '#fff', fontWeight: 'bold', lineHeight: 1.2 }}>{displayName}</div>
         <MiniRunner appearance={(athlete as any).appearance} jerseyFallback={RARITY_COLORS[t.rarity] || '#ff4444'} />
-        <div style={{ fontSize: 34, fontWeight: 'bold', color: hasPerfBoosts ? '#00ff88' : '#fff', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: 30, fontWeight: 'bold', color: hasPerfBoosts ? '#00ff88' : '#fff', textShadow: '2px 2px 4px rgba(0,0,0,0.5)', lineHeight: 1 }}>
           {boostedOVR}
         </div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{t.specialtyEvent}</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}>{t.specialtyEvent}</div>
         {t.splitType && (() => { const st = formatSplitType(t.splitType); return (
           <div style={{
-            fontSize: 12, fontWeight: 'bold', color: st.color, marginTop: 4,
-            background: 'rgba(0,0,0,0.4)', padding: '3px 10px', borderRadius: 6,
+            fontSize: 10, fontWeight: 'bold', color: st.color, marginTop: 2,
+            background: 'rgba(0,0,0,0.7)', padding: '2px 8px', borderRadius: 5,
             border: `1px solid ${st.color}44`, letterSpacing: 0.5,
           }}>{st.label}</div>
         ); })()}
         {appliedBoosts.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 3 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 3 }}>
             {appliedBoosts.map((pb: any, i: number) => (
               <div key={i} style={{
-                width: 18, height: 18, borderRadius: '50%',
-                background: `radial-gradient(circle, ${pb.color}88, ${pb.color}44)`,
-                border: `1px solid ${pb.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10,
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.65)',
+                border: `2px solid ${pb.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, boxShadow: `0 0 8px ${pb.color}88`,
               }}>{pb.iconKey}</div>
             ))}
           </div>
@@ -133,37 +134,38 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
       backgroundSize: isShimmer ? '300% 100%' : undefined,
       animation: isShimmer ? 'ssCardShimmer 8s ease-in-out infinite' : undefined,
       border: selected ? '3px solid #FFD700' : isLegend ? '2px solid #ffaa33' : isSS ? '2px solid #cc66ff' : '2px solid #444',
-      borderRadius: 14, padding: '16px', cursor: onClick ? 'pointer' : 'default',
-      width: 300, transition: 'transform 0.15s',
+      borderRadius: 14, padding: '20px', cursor: onClick ? 'pointer' : 'default',
+      width: 380, height: 650, overflow: 'hidden', transition: 'transform 0.15s',
+      display: 'flex', flexDirection: 'column' as const,
       transform: selected ? 'scale(1.05)' : 'scale(1)',
       boxShadow: isLegend ? '0 0 15px rgba(255,136,0,0.6)' : isSS ? '0 0 15px rgba(170,68,255,0.5)' : selected ? '0 0 20px rgba(255,215,0,0.5)' : '0 4px 12px rgba(0,0,0,0.3)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>{t.rarity}</span>
-        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{t.nationality}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontWeight: 'bold' }}>{t.rarity}</span>
+        <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>{t.nationality}</span>
       </div>
 
-      <div style={{ textAlign: 'center', marginBottom: 8 }}>
-        <div style={{ fontSize: 19, fontWeight: 'bold', color: '#fff' }}>{displayName}</div>
-        <MiniRunner appearance={(athlete as any).appearance} jerseyFallback={RARITY_COLORS[t.rarity] || '#ff4444'} />
-        <div style={{ fontSize: 48, fontWeight: 'bold', color: hasPerfBoosts ? '#00ff88' : '#fff', textShadow: '2px 2px 6px rgba(0,0,0,0.5)', lineHeight: 1.1 }}>
+      <div style={{ textAlign: 'center', marginBottom: 10 }}>
+        <div style={{ fontSize: 22, fontWeight: 'bold', color: '#fff' }}>{displayName}</div>
+        <MiniRunner appearance={(athlete as any).appearance} jerseyFallback={RARITY_COLORS[t.rarity] || '#ff4444'} large />
+        <div style={{ fontSize: 52, fontWeight: 'bold', color: hasPerfBoosts ? '#00ff88' : '#fff', textShadow: '2px 2px 6px rgba(0,0,0,0.5)', lineHeight: 1.1 }}>
           {boostedOVR}
         </div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>OVERALL RATING</div>
+        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)' }}>OVERALL RATING</div>
       </div>
 
-      <div style={{ fontSize: 15, color: '#FFD700', textAlign: 'center', marginBottom: 4 }}>
+      <div style={{ fontSize: 17, color: '#FFD700', textAlign: 'center', marginBottom: 6, fontWeight: 'bold' }}>
         {t.specialtyEvent} Specialist
       </div>
       {t.splitType && (() => { const st = formatSplitType(t.splitType); return (
         <div style={{
-          fontSize: 15, fontWeight: 'bold', color: st.color, textAlign: 'center', marginBottom: 8,
-          background: 'rgba(0,0,0,0.35)', padding: '5px 12px', borderRadius: 8,
+          fontSize: 16, fontWeight: 'bold', color: st.color, textAlign: 'center', marginBottom: 10,
+          background: 'rgba(0,0,0,0.7)', padding: '6px 14px', borderRadius: 8,
           border: `1px solid ${st.color}55`, letterSpacing: 0.5,
         }}>{st.label}</div>
       ); })()}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, fontSize: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 16 }}>
         <StatBar label="SPD" value={t.stats.speed} boost={perfBoostTotals.speed} />
         <StatBar label="STA" value={t.stats.stamina} boost={perfBoostTotals.stamina} />
         <StatBar label="ACC" value={t.stats.acceleration} boost={perfBoostTotals.acceleration} />
@@ -172,27 +174,27 @@ export function AthleteCard({ athlete, selected, onClick, compact }: Props) {
 
       {/* Applied performance boost circles */}
       {appliedBoosts.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
           {appliedBoosts.map((pb: any, i: number) => (
             <div key={i} title={`${pb.name}: +${pb.statBoosts.speed}SPD +${pb.statBoosts.stamina}STA +${pb.statBoosts.acceleration}ACC +${pb.statBoosts.form}FRM`}
               style={{
-                width: 28, height: 28, borderRadius: '50%',
+                width: 44, height: 44, borderRadius: '50%',
                 background: `radial-gradient(circle, ${pb.color}88, ${pb.color}44)`,
                 border: `2px solid ${pb.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14,
+                fontSize: 24,
               }}>{pb.iconKey}</div>
           ))}
           {/* Empty slots */}
           {Array.from({ length: 3 - appliedBoosts.length }).map((_, i) => (
             <div key={`empty-${i}`} style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.2)',
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.3)', border: '2px dashed rgba(255,255,255,0.2)',
             }} />
           ))}
         </div>
       )}
 
-      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', marginTop: 6, textAlign: 'center' }}>
+      <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', marginTop: 10, textAlign: 'center' }}>
         {t.flavorText}
       </div>
     </div>
@@ -223,8 +225,10 @@ const SKIN_COLORS: Record<number, string> = {
 };
 const HAIR_DEFAULTS = '#222222';
 
-function MiniRunner({ appearance, jerseyFallback }: { appearance?: any; jerseyFallback: string }) {
+function MiniRunner({ appearance, jerseyFallback, large }: { appearance?: any; jerseyFallback: string; large?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const canvasW = large ? 200 : 75;
+  const canvasH = large ? 250 : 100;
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
@@ -239,7 +243,7 @@ function MiniRunner({ appearance, jerseyFallback }: { appearance?: any; jerseyFa
     const shoes = pa ? `#${(pa.shoeColor || 0x222222).toString(16).padStart(6, '0')}` : '#222222';
     const hair = pa ? `#${(pa.hairColor || 0x222222).toString(16).padStart(6, '0')}` : HAIR_DEFAULTS;
 
-    const cx = w / 2, by = h * 0.85, s = 1.8;
+    const cx = w / 2, by = h * 0.85, s = large ? 7.0 : 2.2;
     const headY = by - 18 * s;
     const torsoTop = headY + 4 * s;
 
@@ -283,7 +287,23 @@ function MiniRunner({ appearance, jerseyFallback }: { appearance?: any; jerseyFa
     } else {
       ctx.beginPath(); ctx.ellipse(cx, headY - 1.5 * s, 4.5 * s, 3 * s, 0, Math.PI, 0); ctx.fill();
     }
+
+    // Face — eyes and mouth
+    const eyeY = headY - 0.5 * s;
+    const eyeSpacing = 2 * s;
+    // Eyes (small dark circles)
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, 0.8 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, 0.8 * s, 0, Math.PI * 2); ctx.fill();
+    // Eye whites (tiny highlights)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx - eyeSpacing + 0.3 * s, eyeY - 0.3 * s, 0.3 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + eyeSpacing + 0.3 * s, eyeY - 0.3 * s, 0.3 * s, 0, Math.PI * 2); ctx.fill();
+    // Mouth (small arc)
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.6 * s;
+    ctx.beginPath(); ctx.arc(cx, headY + 1.8 * s, 1.5 * s, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
   }, [appearance, jerseyFallback]);
 
-  return <canvas ref={ref} width={50} height={70} style={{ display: 'block', margin: '4px auto' }} />;
+  return <canvas ref={ref} width={canvasW} height={canvasH} style={{ display: 'block', margin: large ? '8px auto' : '4px auto' }} />;
 }

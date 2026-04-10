@@ -818,19 +818,19 @@ export class RaceScene extends Phaser.Scene {
       accumulatedMs += Math.min(dt, 50) * this.playbackSpeed; // cap at 50ms for smoother timing
       const elapsed = accumulatedMs;
 
-      if (phase === 0 && elapsed >= 200) {
+      if (phase === 0 && elapsed >= 500) {
         phase = 1;
         this.countdownText.setFontSize(36);
         this.countdownText.setText('RUNNERS,\nTAKE YOUR MARKS!').setAlpha(1).setScale(1);
         if (this.playbackSpeed <= 1) this.playAnnouncerSound('Runners, take your marks!');
         setCrowdVolume(0.08, 1.0);
         this.crowdState = 'countdown';
-      } else if (phase === 1 && elapsed >= 1800) {
+      } else if (phase === 1 && elapsed >= 3500) {
         phase = 2;
         this.countdownText.setText('SET!').setAlpha(1).setScale(1.3).setFontSize(60);
         if (this.playbackSpeed <= 1) this.playAnnouncerSound('Set!');
         setCrowdVolume(0.03, 0.4);
-      } else if (phase === 2 && elapsed >= 2800) {
+      } else if (phase === 2 && elapsed >= 5500) {
         phase = 3;
         this.playGunshot();
         this.countdownText.setText('GO!').setAlpha(1).setScale(1.8).setFontSize(80);
@@ -1778,27 +1778,37 @@ export class RaceScene extends Phaser.Scene {
     const medals = ['1st', '2nd', '3rd'];
     const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
-    this.results.slice(0, 8).forEach((res, i) => {
+    const maxShow = this.eventType === '2000mSC' ? 12 : 8;
+    this.results.slice(0, maxShow).forEach((res, i) => {
       const isP = res.lane === this.playerLane;
-      const y = centerY - ph / 2 + 65 + i * 36;
+      const rowH = maxShow > 8 ? 28 : 36;
+      const y = centerY - ph / 2 + 65 + i * rowH;
       const col = isP ? '#FFD700' : i < 3 ? '#fff' : '#999';
+      const fs = maxShow > 8 ? '12px' : '14px';
 
       this.add.text(centerX - 190, y, i < 3 ? medals[i] : `${i + 1}th`, {
-        fontSize: '16px', fontFamily: 'Arial Black',
+        fontSize: maxShow > 8 ? '13px' : '16px', fontFamily: 'Arial Black',
         color: i < 3 ? medalColors[i] : '#555',
         stroke: '#000', strokeThickness: 2,
       }).setDepth(9002);
 
-      this.add.arc(centerX - 130, y + 9, 7, 0, 360, false, LANE_COLORS[res.lane - 1]).setDepth(9002);
+      this.add.arc(centerX - 130, y + 9, maxShow > 8 ? 5 : 7, 0, 360, false, LANE_COLORS[(res.lane - 1) % LANE_COLORS.length]).setDepth(9002);
 
-      this.add.text(centerX - 110, y, `${res.displayName}${isP ? ' (YOU)' : ''}`, {
-        fontSize: '14px', fontFamily: 'Arial',
+      this.add.text(centerX - 115, y, `${res.displayName}${isP ? ' (YOU)' : ''}`, {
+        fontSize: fs, fontFamily: 'Arial',
         color: col, stroke: '#000', strokeThickness: 2,
       }).setDepth(9002);
 
-      this.add.text(centerX + 150, y, formatRaceTime(res.finishTimeMs), {
-        fontSize: '14px', fontFamily: 'Arial Black',
+      this.add.text(centerX + 110, y, formatRaceTime(res.finishTimeMs), {
+        fontSize: fs, fontFamily: 'Arial Black',
         color: col, stroke: '#000', strokeThickness: 2,
+      }).setOrigin(1, 0).setDepth(9002);
+
+      // Coins earned for all athletes
+      const coins = i === 0 ? 75 : i <= 2 ? 65 : 40;
+      this.add.text(centerX + 185, y, `🪙+${coins}`, {
+        fontSize: fs, fontFamily: 'Arial Black',
+        color: isP ? '#FFD700' : '#aa8833', stroke: '#000', strokeThickness: 2,
       }).setOrigin(1, 0).setDepth(9002);
     });
 
