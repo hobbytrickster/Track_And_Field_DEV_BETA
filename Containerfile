@@ -18,6 +18,9 @@ RUN npm install --legacy-peer-deps
 # Copy all source code and assets
 COPY . .
 
+# Remove any stale build artifacts that snuck in
+RUN rm -rf packages/client/dist packages/shared/dist packages/server/dist
+
 # Build shared package (TypeScript)
 RUN cd packages/shared && npx tsc
 
