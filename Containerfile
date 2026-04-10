@@ -18,14 +18,17 @@ RUN npm install --legacy-peer-deps
 # Copy all source code and assets
 COPY . .
 
-# Remove any stale build artifacts that snuck in
-RUN rm -rf packages/client/dist packages/shared/dist packages/server/dist
+# Remove ALL stale build artifacts and caches
+RUN rm -rf packages/client/dist packages/shared/dist packages/server/dist \
+    node_modules/.vite node_modules/.cache packages/client/node_modules/.vite \
+    /tmp/* /root/.cache
 
 # Build shared package (TypeScript)
 RUN cd packages/shared && npx tsc
 
-# Build client (Vite static bundle)
-RUN cd packages/client && npx vite build
+# Build client (Vite static bundle) — force clean build
+RUN cd packages/client && NODE_ENV=production npx vite build 2>&1 && \
+    echo "BUILD HASH:" && ls packages/client/dist/assets/index-*.js 2>/dev/null || ls dist/assets/index-*.js
 
 # Data file lives inside the container at /app/data/
 # Mount a volume to /app/data/ for persistence
