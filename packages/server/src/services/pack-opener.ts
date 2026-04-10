@@ -126,6 +126,7 @@ export function openPack(userId: string, packType: PackType): PackContents {
       appearance: randAppearance,
       overrideStats: { speed, stamina, acceleration, form },
       overrideOverall: overallRating,
+      overrideRarity: rarity,
       overrideSplitType: splitType,
       overrideName: fullName,
       overrideNationality: nationality,

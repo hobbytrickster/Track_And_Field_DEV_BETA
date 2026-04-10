@@ -117,6 +117,7 @@ export interface DbUserAthlete {
   // Per-card overrides (randomized at pack open time)
   overrideStats?: { speed: number; stamina: number; acceleration: number; form: number };
   overrideOverall?: number;
+  overrideRarity?: string;
   overrideSplitType?: string;
   overrideName?: string;
   overrideNationality?: string;

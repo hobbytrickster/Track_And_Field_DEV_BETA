@@ -14,9 +14,10 @@ export function registerCollectionRoutes(app: FastifyInstance) {
       .map(a => {
         const baseTemplate = ATHLETE_TEMPLATES.find(t => t.id === a.cardId);
         // Apply per-card overrides from pack opening (randomized stats, name, split type)
-        // Rarity is always the base template's rarity — never changes with gear or overrides
+        // Rarity: use overrideRarity (from migration/pack), else base template rarity
         const template = baseTemplate ? {
           ...baseTemplate,
+          ...(a.overrideRarity ? { rarity: a.overrideRarity } : {}),
           ...(a.overrideStats ? { stats: a.overrideStats } : {}),
           ...(a.overrideOverall != null ? { overallRating: a.overrideOverall } : {}),
           ...(a.overrideSplitType !== undefined ? { splitType: a.overrideSplitType } : {}),
