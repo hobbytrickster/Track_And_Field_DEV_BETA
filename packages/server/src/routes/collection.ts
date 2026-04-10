@@ -14,12 +14,17 @@ export function registerCollectionRoutes(app: FastifyInstance) {
       .map(a => {
         const baseTemplate = ATHLETE_TEMPLATES.find(t => t.id === a.cardId);
         // Apply per-card overrides from pack opening (randomized stats, name, split type)
-        // Apply overrides and derive rarity from actual OVR
+        // Apply overrides. Use base template rarity but upgrade if OVR exceeds the range.
         const ovr = a.overrideOverall ?? baseTemplate?.overallRating ?? 0;
-        const derivedRarity = ovr >= 100 ? 'legend' : ovr >= 96 ? 'superstar' : ovr >= 79 ? 'diamond' : ovr >= 66 ? 'platinum' : ovr >= 51 ? 'gold' : ovr >= 36 ? 'silver' : 'bronze';
+        const baseRarity = baseTemplate?.rarity || 'bronze';
+        // Only derive rarity if there's no base template or if OVR is above the base rarity's max
+        const ovrRarity = ovr >= 99 ? 'legend' : ovr >= 96 ? 'superstar' : ovr >= 79 ? 'diamond' : ovr >= 66 ? 'platinum' : ovr >= 51 ? 'gold' : ovr >= 36 ? 'silver' : 'bronze';
+        // Use whichever is higher tier
+        const rarityOrder = ['bronze','silver','gold','platinum','diamond','superstar','legend'];
+        const effectiveRarity = rarityOrder.indexOf(ovrRarity) >= rarityOrder.indexOf(baseRarity) ? ovrRarity : baseRarity;
         const template = baseTemplate ? {
           ...baseTemplate,
-          rarity: derivedRarity,
+          rarity: effectiveRarity,
           ...(a.overrideStats ? { stats: a.overrideStats } : {}),
           ...(a.overrideOverall != null ? { overallRating: a.overrideOverall } : {}),
           ...(a.overrideSplitType !== undefined ? { splitType: a.overrideSplitType } : {}),
